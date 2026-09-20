@@ -1,0 +1,566 @@
+<title>CTW Field Tools</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CTW Calc">
+<style>
+  /* ---------- tokens: dark-first, three viewer states ---------- */
+  :root{
+    --bg:#0d1117; --surface:#141b23; --surface-2:#1c252f; --surface-3:#232e3a;
+    --border:#2a3542; --border-soft:#202a35;
+    --text:#eef2f6; --text-dim:#93a3b2; --text-faint:#5c6b7a;
+    --accent:#e8952f; --accent-ink:#1a1206; --accent-soft:rgba(232,149,47,.14); --accent-border:rgba(232,149,47,.45);
+    --accent-2:#4fb0e0; --accent-2-soft:rgba(79,176,224,.14);
+    --good:#4caf7d; --good-soft:rgba(76,175,125,.14);
+    --danger:#e2574c; --danger-soft:rgba(226,87,76,.14);
+    --shadow:rgba(0,0,0,.45);
+    --focus:#4fb0e0;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f4efe4; --surface:#fffdfa; --surface-2:#faf2e3; --surface-3:#f2e6cf;
+      --border:#e0d2b4; --border-soft:#ecdfc4;
+      --text:#211a0f; --text-dim:#6e5e46; --text-faint:#a59378;
+      --accent:#b8630f; --accent-ink:#fff8ee; --accent-soft:rgba(184,99,15,.12); --accent-border:rgba(184,99,15,.4);
+      --accent-2:#166f97; --accent-2-soft:rgba(22,111,151,.12);
+      --good:#2f7d54; --good-soft:rgba(47,125,84,.12);
+      --danger:#b83a30; --danger-soft:rgba(184,58,48,.10);
+      --shadow:rgba(70,50,20,.14);
+      --focus:#166f97;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#f4efe4; --surface:#fffdfa; --surface-2:#faf2e3; --surface-3:#f2e6cf;
+    --border:#e0d2b4; --border-soft:#ecdfc4;
+    --text:#211a0f; --text-dim:#6e5e46; --text-faint:#a59378;
+    --accent:#b8630f; --accent-ink:#fff8ee; --accent-soft:rgba(184,99,15,.12); --accent-border:rgba(184,99,15,.4);
+    --accent-2:#166f97; --accent-2-soft:rgba(22,111,151,.12);
+    --good:#2f7d54; --good-soft:rgba(47,125,84,.12);
+    --danger:#b83a30; --danger-soft:rgba(184,58,48,.10);
+    --shadow:rgba(70,50,20,.14);
+    --focus:#166f97;
+    color-scheme: light;
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Manrope',-apple-system,'Segoe UI',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  h1,h2,h3{ font-family:'Oswald',sans-serif; text-wrap:balance; margin:0; letter-spacing:.01em; }
+  .mono{ font-family:'JetBrains Mono',ui-monospace,monospace; }
+  a{ color:inherit; }
+  button{ font-family:inherit; }
+  ::selection{ background:var(--accent-soft); }
+  :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; border-radius:4px; }
+
+  .app{ max-width:560px; margin-inline:auto; min-height:100%; display:flex; flex-direction:column; }
+
+  /* ---------- header ---------- */
+  header{
+    position:sticky; top:env(safe-area-inset-top,0px); z-index:10;
+    display:flex; align-items:center; gap:.7rem;
+    padding:.85rem 1.1rem; padding-top:calc(.85rem + env(safe-area-inset-top,0px));
+    background:color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border-soft);
+  }
+  .back-btn{
+    display:none; align-items:center; gap:.3rem; background:none; border:none; color:var(--text-dim);
+    font-size:.85rem; font-weight:600; padding:.4rem .5rem .4rem .2rem; margin-left:-.2rem; cursor:pointer; border-radius:8px;
+  }
+  .back-btn:hover{ color:var(--text); background:var(--surface-2); }
+  .brand{ display:flex; align-items:center; gap:.55rem; text-decoration:none; }
+  .brand-mark{ width:30px; height:30px; border-radius:8px; background:var(--bg); border:1px solid var(--accent-border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .brand-mark svg{ width:16px; height:16px; }
+  .brand-text{ line-height:1.05; }
+  .brand-text .name{ font-family:'Oswald',sans-serif; font-size:.92rem; font-weight:600; letter-spacing:.06em; }
+  .brand-text .tag{ font-size:.62rem; color:var(--text-faint); letter-spacing:.14em; font-weight:600; }
+  .tool-name{ font-family:'Oswald',sans-serif; font-size:1.02rem; font-weight:600; letter-spacing:.02em; }
+  header .spacer{ flex:1; }
+  .status{ display:flex; align-items:center; gap:.4rem; font-size:.66rem; color:var(--text-faint); font-weight:600; letter-spacing:.05em; }
+  .status .dot{ width:7px; height:7px; border-radius:50%; background:var(--good); box-shadow:0 0 0 3px var(--good-soft); }
+  .status.offline .dot{ background:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+
+  main{ flex:1; padding:1.1rem; padding-bottom:2.5rem; }
+  .view{ display:none; }
+  .view.active{ display:block; animation:rise .28s ease both; }
+  @keyframes rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+  @media (prefers-reduced-motion: reduce){ .view.active{ animation:none; } }
+
+  /* ---------- home ---------- */
+  .eyebrow{ font-size:.68rem; font-weight:700; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; }
+  .view-home h1{ font-size:1.75rem; margin-top:.35rem; }
+  .lede{ color:var(--text-dim); font-size:.9rem; line-height:1.55; margin-top:.55rem; max-width:46ch; }
+
+  .tool-grid{ display:grid; grid-template-columns:1fr; gap:.65rem; margin-top:1.4rem; }
+  @media (min-width:480px){ .tool-grid{ grid-template-columns:1fr 1fr; } }
+
+  .tool-card{
+    text-align:left; display:flex; flex-direction:column; gap:.5rem;
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:1rem; cursor:pointer; color:inherit; font:inherit;
+    transition:border-color .15s ease, transform .15s ease, background .15s ease;
+  }
+  .tool-card:hover{ border-color:var(--accent-border); background:var(--surface-2); }
+  .tool-card:active{ transform:scale(.99); }
+  .tool-card .icon{ width:34px; height:34px; border-radius:9px; background:var(--accent-soft); display:flex; align-items:center; justify-content:center; }
+  .tool-card .icon svg{ width:18px; height:18px; }
+  .tool-card h3{ font-size:1rem; font-weight:600; }
+  .tool-card p{ margin:0; font-size:.8rem; color:var(--text-dim); line-height:1.45; }
+  .tool-card[disabled]{ cursor:default; opacity:.55; }
+  .tool-card[disabled]:hover{ border-color:var(--border); background:var(--surface); }
+  .chip{
+    align-self:flex-start; font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    padding:.2rem .5rem; border-radius:999px; background:var(--surface-3); color:var(--text-faint);
+  }
+  .chip.ready{ background:var(--good-soft); color:var(--good); }
+
+  footer{ padding:1.4rem 1.1rem calc(1.4rem + env(safe-area-inset-bottom,0px)); border-top:1px solid var(--border-soft); }
+  .foot-row{ display:flex; align-items:center; justify-content:space-between; gap:.8rem; flex-wrap:wrap; }
+  .foot-note{ font-size:.74rem; color:var(--text-faint); line-height:1.6; max-width:32ch; }
+  .install-btn{
+    display:none; align-items:center; gap:.4rem; background:var(--accent); color:var(--accent-ink); border:none;
+    font-size:.78rem; font-weight:700; padding:.55rem .9rem; border-radius:10px; cursor:pointer; white-space:nowrap;
+  }
+  .install-btn.show{ display:inline-flex; }
+  .version{ font-size:.68rem; color:var(--text-faint); margin-top:.7rem; }
+
+  /* ---------- ohm's law view ---------- */
+  .view-intro{ font-size:.85rem; color:var(--text-dim); line-height:1.55; margin-top:.4rem; max-width:48ch; }
+
+  .field-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.65rem; margin-top:1.3rem; }
+  @media (max-width:360px){ .field-grid{ grid-template-columns:1fr; } }
+
+  .field{
+    background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:.85rem .9rem;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .field.is-input{ border-color:var(--accent-border); background:linear-gradient(180deg, var(--accent-soft), transparent 60%); }
+  .field.is-solved{ border-color:var(--accent-2); background:linear-gradient(180deg, var(--accent-2-soft), transparent 60%); }
+  .field.is-invalid{ border-color:var(--danger); background:var(--danger-soft); }
+
+  .field-head{ display:flex; align-items:baseline; justify-content:space-between; gap:.4rem; }
+  .field-label{ font-family:'Oswald',sans-serif; font-size:.82rem; font-weight:600; letter-spacing:.03em; }
+  .field-sub{ font-size:.62rem; color:var(--text-faint); letter-spacing:.04em; }
+  .field-state{ font-size:.58rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); }
+  .field.is-input .field-state{ color:var(--accent); }
+  .field.is-solved .field-state{ color:var(--accent-2); }
+
+  .field-input-row{ display:flex; align-items:baseline; gap:.35rem; margin-top:.3rem; }
+  .field-input-row input{
+    width:100%; min-width:0; background:none; border:none; color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:1.35rem; font-weight:600; padding:.1rem 0;
+  }
+  .field-input-row input::placeholder{ color:var(--text-faint); font-weight:400; }
+  .field-input-row input:focus{ outline:none; }
+  .field-input-row input::-webkit-outer-spin-button,
+  .field-input-row input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .field-input-row input[type="number"]{ -moz-appearance:textfield; }
+  .field-input-row .unit{ font-family:'JetBrains Mono',monospace; font-size:1rem; color:var(--text-dim); flex-shrink:0; }
+  .field-solved-value{ font-family:'JetBrains Mono',monospace; font-size:1.35rem; font-weight:600; margin-top:.3rem; }
+  .field-solved-value.empty{ color:var(--text-faint); font-weight:400; }
+  .field-solved-value.bad{ color:var(--danger); font-size:1rem; }
+
+  .actions-row{ display:flex; align-items:center; justify-content:space-between; gap:.6rem; margin-top:1rem; }
+  .hint{ font-size:.74rem; color:var(--text-faint); line-height:1.5; }
+  .clear-btn{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); font-size:.78rem; font-weight:700;
+    padding:.5rem .85rem; border-radius:10px; cursor:pointer; flex-shrink:0;
+  }
+  .clear-btn:hover{ color:var(--text); border-color:var(--accent-border); }
+
+  .assumption{ font-size:.72rem; color:var(--text-faint); margin-top:1.1rem; line-height:1.55; border-top:1px dashed var(--border); padding-top:.8rem; }
+
+  details.ref{ margin-top:1.3rem; }
+  details.ref summary{
+    cursor:pointer; list-style:none; display:flex; align-items:center; gap:.4rem;
+    font-family:'Oswald',sans-serif; font-size:.85rem; font-weight:600; letter-spacing:.02em; color:var(--text-dim);
+    padding:.7rem 0; border-top:1px solid var(--border-soft);
+  }
+  details.ref summary::-webkit-details-marker{ display:none; }
+  details.ref summary .chev{ transition:transform .15s ease; color:var(--text-faint); }
+  details.ref[open] summary .chev{ transform:rotate(90deg); }
+  details.ref summary:hover{ color:var(--text); }
+
+  .wheel{ display:grid; grid-template-columns:1fr 1fr; gap:2px; max-width:360px; margin:.6rem auto 0; aspect-ratio:1; }
+  .quad{ background:var(--surface-2); padding:.8rem; display:flex; flex-direction:column; justify-content:center; gap:.2rem; }
+  .quad:nth-child(1){ border-top-left-radius:100%; padding-left:1.4rem; padding-top:1.4rem; }
+  .quad:nth-child(2){ border-top-right-radius:100%; padding-right:1.4rem; padding-top:1.4rem; text-align:right; align-items:flex-end; }
+  .quad:nth-child(3){ border-bottom-left-radius:100%; padding-left:1.4rem; padding-bottom:1.4rem; }
+  .quad:nth-child(4){ border-bottom-right-radius:100%; padding-right:1.4rem; padding-bottom:1.4rem; text-align:right; align-items:flex-end; }
+  .quad .qv{ font-family:'Oswald',sans-serif; font-weight:700; font-size:1.1rem; color:var(--accent); }
+  .quad .qu{ font-size:.6rem; color:var(--text-faint); letter-spacing:.06em; text-transform:uppercase; margin-bottom:.15rem; }
+  .quad .qf{ font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--text-dim); line-height:1.5; }
+
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+</style>
+
+<div class="app" id="app">
+  <header>
+    <button class="back-btn" id="backBtn" type="button" aria-label="Back to field tools">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 5l-7 7 7 7"/></svg>
+      Tools
+    </button>
+    <a class="brand" href="#/" id="brandLink">
+      <span class="brand-mark">
+        <svg viewBox="0 0 100 100" fill="none"><path d="M58 6 22 56h24l-6 38 40-52H54l4-36z" fill="var(--accent)"/></svg>
+      </span>
+      <span class="brand-text">
+        <div class="name">CTW AUTOMATION</div>
+        <div class="tag">FIELD TOOLS</div>
+      </span>
+    </a>
+    <span class="tool-name" id="toolNameLabel" hidden></span>
+    <div class="spacer"></div>
+    <div class="status" id="statusBadge"><span class="dot"></span><span id="statusText">Online</span></div>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="view view-home" id="view-home" aria-labelledby="homeTitle">
+      <div class="eyebrow">Toolkit</div>
+      <h1 id="homeTitle">Field Tools</h1>
+      <p class="lede">Quick calculators for panel, service, and troubleshooting work. Installs to your home screen and keeps working with no signal.</p>
+
+      <div class="tool-grid" id="toolGrid"></div>
+
+      <template id="toolCardTemplate">
+        <button class="tool-card" type="button">
+          <span class="icon" aria-hidden="true"></span>
+          <span class="chip"></span>
+          <h3></h3>
+          <p></p>
+        </button>
+      </template>
+    </section>
+
+    <!-- OHM'S LAW -->
+    <section class="view" id="view-ohms-law" aria-labelledby="ohmsTitle">
+      <div class="eyebrow">Ohm's Law &amp; Power</div>
+      <h1 id="ohmsTitle" style="font-size:1.55rem;">Solve V · I · R · P</h1>
+      <p class="view-intro">Enter any two values — the other two solve automatically. Tap a solved field to overwrite it.</p>
+
+      <div class="field-grid" id="fieldGrid">
+        <div class="field" data-key="V">
+          <div class="field-head">
+            <span class="field-label">Voltage</span>
+            <span class="field-state" data-state-for="V"></span>
+          </div>
+          <div class="field-sub">electromotive force</div>
+          <div class="field-input-row">
+            <input type="number" inputmode="decimal" step="any" id="f-V" aria-label="Voltage in volts" placeholder="0">
+            <span class="unit">V</span>
+          </div>
+        </div>
+        <div class="field" data-key="I">
+          <div class="field-head">
+            <span class="field-label">Current</span>
+            <span class="field-state" data-state-for="I"></span>
+          </div>
+          <div class="field-sub">rate of flow</div>
+          <div class="field-input-row">
+            <input type="number" inputmode="decimal" step="any" id="f-I" aria-label="Current in amps" placeholder="0">
+            <span class="unit">A</span>
+          </div>
+        </div>
+        <div class="field" data-key="R">
+          <div class="field-head">
+            <span class="field-label">Resistance</span>
+            <span class="field-state" data-state-for="R"></span>
+          </div>
+          <div class="field-sub">opposition to flow</div>
+          <div class="field-input-row">
+            <input type="number" inputmode="decimal" step="any" min="0" id="f-R" aria-label="Resistance in ohms" placeholder="0">
+            <span class="unit">Ω</span>
+          </div>
+        </div>
+        <div class="field" data-key="P">
+          <div class="field-head">
+            <span class="field-label">Power</span>
+            <span class="field-state" data-state-for="P"></span>
+          </div>
+          <div class="field-sub">rate of work</div>
+          <div class="field-input-row">
+            <input type="number" inputmode="decimal" step="any" min="0" id="f-P" aria-label="Power in watts" placeholder="0">
+            <span class="unit">W</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions-row">
+        <p class="hint" id="hintText" role="status" aria-live="polite">Enter two values to solve.</p>
+        <button class="clear-btn" id="clearBtn" type="button">Clear</button>
+      </div>
+
+      <p class="assumption">Assumes a purely resistive DC circuit, or an AC circuit at unity power factor. For reactive AC loads, V·I ≠ true power.</p>
+
+      <details class="ref">
+        <summary><svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 5l7 7-7 7"/></svg> All 12 formulas</summary>
+        <div class="wheel" aria-hidden="true">
+          <div class="quad"><div class="qu">Voltage</div><div class="qv">V</div><div class="qf">V = I·R<br>V = P/I<br>V = √(P·R)</div></div>
+          <div class="quad"><div class="qu">Current</div><div class="qv">I</div><div class="qf">I = V/R<br>I = P/V<br>I = √(P/R)</div></div>
+          <div class="quad"><div class="qu">Resistance</div><div class="qv">R</div><div class="qf">R = V/I<br>R = V²/P<br>R = P/I²</div></div>
+          <div class="quad"><div class="qu">Power</div><div class="qv">P</div><div class="qf">P = V·I<br>P = I²·R<br>P = V²/R</div></div>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <footer id="homeFooter">
+    <div class="foot-row">
+      <p class="foot-note">Works offline once loaded. On iPhone: Share → Add to Home Screen.</p>
+      <button class="install-btn" id="installBtn" type="button">Install app</button>
+    </div>
+    <div class="version">CTW Automation · v0.1 · Ohm's Law &amp; Power</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- tool registry (extend here for future calculators) ---------------- */
+  var TOOLS = [
+    { id:"ohms-law", name:"Ohm's Law &amp; Power", status:"ready",
+      desc:"Solve voltage, current, resistance and power from any two knowns.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z" fill="var(--accent)" stroke="none"/></svg>' },
+    { id:"voltage-drop", name:"Voltage Drop", status:"soon",
+      desc:"NEC Ch. 9 conductor voltage drop — single &amp; three phase.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg>' },
+    { id:"ampacity", name:"Wire Ampacity", status:"soon",
+      desc:"NEC Table 310.16 conductor sizing and temperature derating.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>' },
+    { id:"conduit-fill", name:"Conduit Fill", status:"soon",
+      desc:"NEC Ch. 9 Table 4/5 raceway fill percentage by conductor mix.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="2"/><circle cx="15" cy="14" r="2.4"/></svg>' },
+    { id:"box-fill", name:"Box Fill", status:"soon",
+      desc:"NEC 314.16 device box volume and conductor fill count.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>' }
+  ];
+
+  var grid = document.getElementById("toolGrid");
+  var tpl = document.getElementById("toolCardTemplate");
+  TOOLS.forEach(function(tool){
+    var node = tpl.content.firstElementChild.cloneNode(true);
+    node.querySelector(".icon").innerHTML = tool.icon;
+    var chip = node.querySelector(".chip");
+    chip.textContent = tool.status === "ready" ? "Ready" : "Coming soon";
+    if (tool.status === "ready") chip.classList.add("ready");
+    node.querySelector("h3").innerHTML = tool.name;
+    node.querySelector("p").innerHTML = tool.desc;
+    if (tool.status === "ready"){
+      node.addEventListener("click", function(){ location.hash = "#/" + tool.id; });
+    } else {
+      node.disabled = true;
+      node.setAttribute("aria-disabled", "true");
+    }
+    grid.appendChild(node);
+  });
+
+  /* ---------------- routing ---------------- */
+  var homeFooter = document.getElementById("homeFooter");
+  var backBtn = document.getElementById("backBtn");
+  var brandLink = document.getElementById("brandLink");
+  var toolNameLabel = document.getElementById("toolNameLabel");
+  var views = {
+    "": document.getElementById("view-home"),
+    "ohms-law": document.getElementById("view-ohms-law")
+  };
+
+  function render(){
+    var route = (location.hash || "#/").replace(/^#\/?/, "");
+    var view = views[route] || views[""];
+    Object.keys(views).forEach(function(k){ views[k].classList.toggle("active", views[k] === view); });
+    var isHome = view === views[""];
+    backBtn.style.display = isHome ? "none" : "inline-flex";
+    brandLink.style.display = isHome ? "flex" : "none";
+    toolNameLabel.hidden = isHome;
+    if (!isHome){
+      var tool = TOOLS.filter(function(t){ return t.id === route; })[0];
+      toolNameLabel.innerHTML = tool ? tool.name : "";
+    }
+    homeFooter.style.display = isHome ? "block" : "none";
+    window.scrollTo(0,0);
+  }
+  window.addEventListener("hashchange", render);
+  backBtn.addEventListener("click", function(){ location.hash = "#/"; });
+  if (!location.hash) location.hash = "#/";
+  render();
+
+  /* ---------------- ohm's law calculator ---------------- */
+  var KEYS = ["V","I","R","P"];
+  var UNITS = { V:"V", I:"A", R:"Ω", P:"W" };
+  var inputs = {}; KEYS.forEach(function(k){ inputs[k] = document.getElementById("f-" + k); });
+  var fieldEls = {}; KEYS.forEach(function(k){ fieldEls[k] = document.querySelector('.field[data-key="' + k + '"]'); });
+  var stateEls = {}; KEYS.forEach(function(k){ stateEls[k] = document.querySelector('[data-state-for="' + k + '"]'); });
+  var hintText = document.getElementById("hintText");
+  var enteredOrder = []; // user-entered keys, most recent last, max 2
+
+  var SI_TABLE = [
+    { scale:1e9, prefix:"G" }, { scale:1e6, prefix:"M" }, { scale:1e3, prefix:"k" },
+    { scale:1, prefix:"" }, { scale:1e-3, prefix:"m" }, { scale:1e-6, prefix:"µ" }, { scale:1e-9, prefix:"n" }
+  ];
+
+  function formatNumber(n){
+    var abs = Math.abs(n);
+    var decimals = abs === 0 ? 2 : abs < 10 ? 3 : abs < 100 ? 2 : abs < 1000 ? 1 : 0;
+    var s = n.toFixed(decimals);
+    if (s.indexOf(".") !== -1) s = s.replace(/0+$/, "").replace(/\.$/, "");
+    return s;
+  }
+  function formatSI(value, unit){
+    if (value === null || value === undefined || !isFinite(value)) return "—";
+    var abs = Math.abs(value);
+    var entry = SI_TABLE[SI_TABLE.length - 1];
+    for (var i = 0; i < SI_TABLE.length; i++){ if (abs >= SI_TABLE[i].scale){ entry = SI_TABLE[i]; break; } }
+    if (abs === 0) entry = { scale:1, prefix:"" };
+    var scaled = value / entry.scale;
+    return formatNumber(scaled) + " " + entry.prefix + unit;
+  }
+
+  function solve(known){
+    var V = known.V, I = known.I, R = known.R, P = known.P;
+    if (V != null && I != null){ R = V / I; P = V * I; }
+    else if (V != null && R != null){ I = V / R; P = (V * V) / R; }
+    else if (V != null && P != null){ I = P / V; R = (V * V) / P; }
+    else if (I != null && R != null){ V = I * R; P = I * I * R; }
+    else if (I != null && P != null){ V = P / I; R = P / (I * I); }
+    else if (R != null && P != null){ V = Math.sqrt(P * R); I = Math.sqrt(P / R); }
+    return { V:V, I:I, R:R, P:P };
+  }
+
+  function setFieldVisual(key, mode){ // 'input' | 'solved' | 'empty' | 'invalid'
+    var el = fieldEls[key];
+    el.classList.remove("is-input", "is-solved", "is-invalid");
+    if (mode === "input") el.classList.add("is-input");
+    if (mode === "solved") el.classList.add("is-solved");
+    if (mode === "invalid") el.classList.add("is-invalid");
+    stateEls[key].textContent = mode === "input" ? "Entered" : mode === "solved" ? "Solved" : "";
+  }
+
+  function recompute(){
+    if (enteredOrder.length < 2){
+      KEYS.forEach(function(k){
+        if (enteredOrder.indexOf(k) === -1){
+          setFieldVisual(k, enteredOrder.length ? "empty" : "empty");
+        }
+      });
+      hintText.textContent = enteredOrder.length === 0
+        ? "Enter two values to solve."
+        : "Enter one more value.";
+      return;
+    }
+    var known = {};
+    enteredOrder.forEach(function(k){ known[k] = parseFloat(inputs[k].value); });
+
+    if (known.R !== undefined && known.R < 0){
+      setFieldVisual("R", "invalid");
+      hintText.textContent = "Resistance can't be negative.";
+      return;
+    }
+    if (known.P !== undefined && known.P < 0){
+      setFieldVisual("P", "invalid");
+      hintText.textContent = "Power can't be negative.";
+      return;
+    }
+
+    var result = solve(known);
+    var ok = true;
+    KEYS.forEach(function(k){
+      if (enteredOrder.indexOf(k) !== -1){
+        setFieldVisual(k, "input");
+      } else {
+        var v = result[k];
+        var bad = v === null || v === undefined || !isFinite(v);
+        if (bad) ok = false;
+        setFieldVisual(k, bad ? "invalid" : "solved");
+        if (document.activeElement !== inputs[k]){
+          inputs[k].value = bad ? "" : formatNumber(v);
+        }
+        inputs[k].placeholder = bad ? "undefined" : "0";
+      }
+    });
+    hintText.textContent = ok ? "Solved from your two values." : "That combination is undefined (divide by zero).";
+  }
+
+  KEYS.forEach(function(key){
+    var input = inputs[key];
+    input.addEventListener("focus", function(){ input.select(); });
+    input.addEventListener("input", function(){
+      var raw = input.value;
+      var idx = enteredOrder.indexOf(key);
+      if (raw === ""){
+        if (idx !== -1) enteredOrder.splice(idx, 1);
+        recompute();
+        return;
+      }
+      if (idx === -1){
+        if (enteredOrder.length >= 2){
+          var evicted = enteredOrder.shift();
+          inputs[evicted].value = "";
+        }
+        enteredOrder.push(key);
+      }
+      recompute();
+    });
+    input.addEventListener("keydown", function(e){ if (e.key === "Enter") input.blur(); });
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", function(){
+    enteredOrder = [];
+    KEYS.forEach(function(k){ inputs[k].value = ""; inputs[k].placeholder = "0"; setFieldVisual(k, "empty"); });
+    hintText.textContent = "Enter two values to solve.";
+    inputs.V.focus();
+  });
+
+  recompute();
+
+  /* ---------------- online / offline status ---------------- */
+  var statusBadge = document.getElementById("statusBadge");
+  var statusText = document.getElementById("statusText");
+  function updateStatus(){
+    var online = navigator.onLine;
+    statusBadge.classList.toggle("offline", !online);
+    statusText.textContent = online ? "Online" : "Offline · cached";
+  }
+  window.addEventListener("online", updateStatus);
+  window.addEventListener("offline", updateStatus);
+  updateStatus();
+
+  /* ---------------- PWA install + service worker ---------------- */
+  var installBtn = document.getElementById("installBtn");
+  var deferredPrompt = null;
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.classList.add("show");
+  });
+  installBtn.addEventListener("click", function(){
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.finally(function(){
+      deferredPrompt = null;
+      installBtn.classList.remove("show");
+    });
+  });
+  window.addEventListener("appinstalled", function(){ installBtn.classList.remove("show"); });
+
+  if ("serviceWorker" in navigator){
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+})();
+</script>
