@@ -102,6 +102,10 @@
   @keyframes rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
   @media (prefers-reduced-motion: reduce){ .view.active{ animation:none; } }
 
+  .mode-panel{ display:none; }
+  .mode-panel.active{ display:block; animation:rise .28s ease both; }
+  @media (prefers-reduced-motion: reduce){ .mode-panel.active{ animation:none; } }
+
   /* ---------- home ---------- */
   .eyebrow{ font-size:.68rem; font-weight:700; letter-spacing:.16em; color:var(--accent); text-transform:uppercase; }
   .view-home h1{ font-size:1.75rem; margin-top:.35rem; }
@@ -307,6 +311,13 @@
     <section class="view" id="view-ohms-law" aria-labelledby="ohmsTitle">
       <div class="eyebrow">Ohm's Law &amp; Power</div>
       <h1 id="ohmsTitle" style="font-size:1.55rem;">Solve V · I · R · P</h1>
+
+      <div class="segmented" id="ohmsMode" role="group" aria-label="Calculator mode" style="margin-top:1.1rem;">
+        <button type="button" data-mode="virp" class="active">V · I · R · P</button>
+        <button type="button" data-mode="pf">Power Factor</button>
+      </div>
+
+      <div class="mode-panel active" id="ohmsPanelVirp">
       <p class="view-intro">Enter any two values — the other two solve automatically. Tap a solved field to overwrite it.</p>
 
       <div class="field-grid" id="fieldGrid">
@@ -372,6 +383,51 @@
           <div class="quad"><div class="qu">Power</div><div class="qv">P</div><div class="qf">P = V·I<br>P = I²·R<br>P = V²/R</div></div>
         </div>
       </details>
+      </div>
+
+      <div class="mode-panel" id="ohmsPanelPf">
+        <p class="view-intro">Enter voltage, current, and phase to get apparent power — then supply power factor or true power to complete the triangle.</p>
+
+        <div class="form-row">
+          <div>
+            <div class="segmented" id="pfPhase" role="group" aria-label="System">
+              <button type="button" data-value="1" class="active">1φ / DC</button>
+              <button type="button" data-value="1.732">3φ</button>
+            </div>
+          </div>
+          <div>
+            <div class="segmented" id="pfKnown" role="group" aria-label="Known value">
+              <button type="button" data-value="pf" class="active">Know PF</button>
+              <button type="button" data-value="p">Know kW</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row three">
+          <div class="vfield">
+            <label for="pf-voltage">Voltage</label>
+            <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="pf-voltage" value="240"><span class="unit">V</span></div>
+          </div>
+          <div class="vfield">
+            <label for="pf-current">Current</label>
+            <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="pf-current" value="20"><span class="unit">A</span></div>
+          </div>
+          <div class="vfield">
+            <label for="pf-known-input" id="pfKnownLabel">Power factor</label>
+            <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="pf-known-input" value="0.85" aria-label="Known value"><span class="unit" id="pfKnownUnit">PF</span></div>
+          </div>
+        </div>
+
+        <div class="quick-chips" id="pfQuickChips">
+          <button type="button" class="quick-chip" data-pf="1">Unity 1.0</button>
+          <button type="button" class="quick-chip active" data-pf="0.85">Motor .85</button>
+          <button type="button" class="quick-chip" data-pf="0.8">.80</button>
+        </div>
+
+        <div class="result-card" id="pfResult" role="status" aria-live="polite"></div>
+
+        <p class="assumption">S = V·I (1φ/DC) or √3·V·I (3φ). P = S·PF, Q = √(S²−P²), θ = cos⁻¹(PF). Power factor is unitless (0–1) — a low PF means more current is needed to deliver the same true power, and utilities may bill a penalty for it.</p>
+      </div>
     </section>
 
     <!-- VOLTAGE DROP -->
@@ -464,7 +520,7 @@
   /* ---------------- tool registry (extend here for future calculators) ---------------- */
   var TOOLS = [
     { id:"ohms-law", name:"Ohm's Law &amp; Power", status:"ready",
-      desc:"Solve voltage, current, resistance and power from any two knowns.",
+      desc:"Solve voltage, current, resistance and power from any two knowns, plus power factor and kVA.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z" fill="var(--accent)" stroke="none"/></svg>' },
     { id:"voltage-drop", name:"Voltage Drop", status:"ready",
       desc:"Voltage drop, % drop, and required conductor size — single &amp; three phase.",
@@ -657,6 +713,146 @@
   });
 
   recompute();
+
+  /* ---------------- ohm's law / power factor mode switch ---------------- */
+  var ohmsModeGroup = document.getElementById("ohmsMode");
+  var ohmsTitleEl = document.getElementById("ohmsTitle");
+  var OHMS_PANELS = { virp: document.getElementById("ohmsPanelVirp"), pf: document.getElementById("ohmsPanelPf") };
+  var OHMS_TITLES = { virp: "Solve V · I · R · P", pf: "Power Factor & kVA" };
+  ohmsModeGroup.querySelectorAll("button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      ohmsModeGroup.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      var mode = btn.getAttribute("data-mode");
+      Object.keys(OHMS_PANELS).forEach(function(k){ OHMS_PANELS[k].classList.toggle("active", k === mode); });
+      ohmsTitleEl.textContent = OHMS_TITLES[mode];
+    });
+  });
+
+  /* ---------------- power factor calculator ---------------- */
+  (function initPowerFactor(){
+    var phaseGroup = document.getElementById("pfPhase");
+    var knownGroup = document.getElementById("pfKnown");
+    var vVoltage = document.getElementById("pf-voltage");
+    var vCurrent = document.getElementById("pf-current");
+    var knownInput = document.getElementById("pf-known-input");
+    var knownLabel = document.getElementById("pfKnownLabel");
+    var knownUnit = document.getElementById("pfKnownUnit");
+    var quickChipsWrap = document.getElementById("pfQuickChips");
+    var quickChips = quickChipsWrap.querySelectorAll(".quick-chip");
+    var resultEl = document.getElementById("pfResult");
+
+    function activeValue(group){ return parseFloat(group.querySelector("button.active").getAttribute("data-value")); }
+    function activeMode(group){ return group.querySelector("button.active").getAttribute("data-value"); }
+
+    function wireSegmented(group, onChange){
+      group.querySelectorAll("button").forEach(function(btn){
+        btn.addEventListener("click", function(){
+          group.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
+          btn.classList.add("active");
+          onChange();
+        });
+      });
+    }
+    wireSegmented(phaseGroup, computePF);
+    wireSegmented(knownGroup, function(){ syncKnownField(); computePF(); });
+
+    quickChips.forEach(function(chip){
+      chip.addEventListener("click", function(){
+        quickChips.forEach(function(c){ c.classList.remove("active"); });
+        chip.classList.add("active");
+        knownInput.value = chip.getAttribute("data-pf");
+        computePF();
+      });
+    });
+
+    function syncKnownField(){
+      var mode = activeMode(knownGroup);
+      if (mode === "pf"){
+        knownLabel.textContent = "Power factor";
+        knownUnit.textContent = "PF";
+        if (!(parseFloat(knownInput.value) <= 1)) knownInput.value = "0.85";
+        quickChipsWrap.style.display = "flex";
+      } else {
+        knownLabel.textContent = "True power";
+        knownUnit.textContent = "kW";
+        quickChipsWrap.style.display = "none";
+      }
+    }
+
+    function classifyPF(pf){
+      if (pf >= 0.95) return { cls:"ok", label:"Good power factor" };
+      if (pf >= 0.85) return { cls:"caution", label:"Fair — correction may help" };
+      return { cls:"bad", label:"Poor — consider PF correction" };
+    }
+
+    function fmt(n, decimals){
+      if (!isFinite(n)) return "—";
+      return n.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
+    }
+
+    [vVoltage, vCurrent, knownInput].forEach(function(el){
+      el.addEventListener("input", function(){
+        if (el === knownInput && activeMode(knownGroup) === "pf"){
+          quickChips.forEach(function(c){ c.classList.toggle("active", c.getAttribute("data-pf") === knownInput.value); });
+        }
+        computePF();
+      });
+    });
+
+    function computePF(){
+      var phaseFactor = activeValue(phaseGroup);
+      var V = parseFloat(vVoltage.value);
+      var I = parseFloat(vCurrent.value);
+      var mode = activeMode(knownGroup);
+      var known = parseFloat(knownInput.value);
+
+      if (!(V > 0) || !(I >= 0)){
+        resultEl.innerHTML = '<p class="hint">Enter source voltage and load current.</p>';
+        return;
+      }
+
+      var S = phaseFactor * V * I;
+      var P, PF;
+
+      if (mode === "pf"){
+        if (!(known >= 0) || known > 1){
+          resultEl.innerHTML = '<p class="hint">Power factor must be between 0 and 1.</p>';
+          return;
+        }
+        PF = known;
+        P = S * PF;
+      } else {
+        if (!(known >= 0)){
+          resultEl.innerHTML = '<p class="hint">Enter true power in kW.</p>';
+          return;
+        }
+        P = known * 1000;
+        if (!(S > 0) || P > S){
+          resultEl.innerHTML = '<p class="hint">True power can’t exceed apparent power (V·I) — check your values.</p>';
+          return;
+        }
+        PF = P / S;
+      }
+
+      var Q = Math.sqrt(Math.max(S * S - P * P, 0));
+      var theta = Math.acos(PF) * (180 / Math.PI);
+      var tag = classifyPF(PF);
+
+      resultEl.innerHTML =
+        '<div class="result-grid">' +
+          '<div class="result-stat"><div class="k">Apparent power</div><div class="v">' + formatSI(S, "VA") + '</div></div>' +
+          '<div class="result-stat"><div class="k">True power</div><div class="v">' + formatSI(P, "W") + '</div></div>' +
+          '<div class="result-stat"><div class="k">Reactive power</div><div class="v">' + formatSI(Q, "VAR") + '</div></div>' +
+          '<div class="result-stat"><div class="k">Power factor</div><div class="v">' + fmt(PF, 2) + '</div></div>' +
+        '</div>' +
+        '<div class="result-stat" style="margin-top:.7rem;"><div class="k">Phase angle</div><div class="v" style="font-size:1.1rem;">' + fmt(theta, 1) + '°</div></div>' +
+        '<span class="pct-chip ' + tag.cls + '">' + tag.label + '</span>';
+    }
+
+    syncKnownField();
+    computePF();
+  })();
 
   /* ---------------- voltage drop calculator ---------------- */
   var CONDUCTORS = [
