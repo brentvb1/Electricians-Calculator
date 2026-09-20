@@ -222,6 +222,37 @@
   }
   .segmented button.active{ background:var(--accent); color:var(--accent-ink); }
   .segmented button:not(.active):hover{ color:var(--text); }
+  .segmented.compact button{ font-size:.72rem; padding:.5rem .35rem; letter-spacing:0; }
+  @media (max-width:360px){ .segmented.compact button{ font-size:.66rem; padding:.45rem .2rem; } }
+
+  /* ---------- wattage pie ---------- */
+  .load-list{ display:flex; flex-direction:column; gap:.5rem; margin-top:1rem; }
+  .wp-row{ display:flex; align-items:center; gap:.5rem; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:.55rem .6rem .55rem .8rem; }
+  .wp-row .wp-name{ flex:1; min-width:0; background:none; border:none; color:var(--text); font-family:'Manrope',sans-serif; font-size:.86rem; font-weight:600; padding:.2rem 0; }
+  .wp-row .wp-name::placeholder{ color:var(--text-faint); font-weight:400; }
+  .wp-row .wp-name:focus{ outline:none; }
+  .wp-watt-wrap{ display:flex; align-items:baseline; gap:.3rem; flex-shrink:0; width:6rem; }
+  .wp-watt-wrap input{ width:100%; min-width:0; background:none; border:none; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:.95rem; font-weight:600; text-align:right; padding:.1rem 0; }
+  .wp-watt-wrap input::-webkit-outer-spin-button, .wp-watt-wrap input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .wp-watt-wrap input[type="number"]{ -moz-appearance:textfield; }
+  .wp-watt-wrap input:focus{ outline:none; }
+  .wp-watt-wrap .unit{ font-size:.72rem; color:var(--text-dim); }
+  .wp-remove{ flex-shrink:0; width:26px; height:26px; border-radius:8px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-faint); font-size:.95rem; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .wp-remove:hover{ color:var(--danger); border-color:var(--danger); }
+
+  .add-load-btn{ display:flex; align-items:center; justify-content:center; gap:.4rem; width:100%; margin-top:.6rem; background:var(--surface-2); border:1px dashed var(--border); color:var(--text-dim); font-size:.82rem; font-weight:700; padding:.6rem; border-radius:12px; cursor:pointer; }
+  .add-load-btn:hover{ color:var(--text); border-color:var(--accent-border); }
+
+  .pie-wrap{ display:flex; align-items:center; gap:1.3rem; margin-top:1.4rem; flex-wrap:wrap; }
+  .pie-chart{ position:relative; width:150px; height:150px; border-radius:50%; flex-shrink:0; margin-inline:auto; transition:background .2s ease; }
+  .pie-center{ position:absolute; inset:22%; border-radius:50%; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-shadow:0 0 0 1px var(--border-soft) inset; }
+  .pie-total{ font-family:'JetBrains Mono',monospace; font-size:1rem; font-weight:700; }
+  .pie-sub{ font-size:.66rem; color:var(--text-faint); margin-top:.1rem; }
+  .pie-legend{ flex:1; min-width:160px; display:flex; flex-direction:column; gap:.45rem; }
+  .legend-item{ display:flex; align-items:center; gap:.5rem; font-size:.8rem; }
+  .legend-swatch{ width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .legend-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+  .legend-value{ font-family:'JetBrains Mono',monospace; color:var(--text-dim); font-size:.72rem; flex-shrink:0; }
 
   .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:.9rem; }
   .form-row.three{ grid-template-columns:1fr 1fr 1fr; }
@@ -312,9 +343,10 @@
       <div class="eyebrow">Ohm's Law &amp; Power</div>
       <h1 id="ohmsTitle" style="font-size:1.55rem;">Solve V · I · R · P</h1>
 
-      <div class="segmented" id="ohmsMode" role="group" aria-label="Calculator mode" style="margin-top:1.1rem;">
-        <button type="button" data-mode="virp" class="active">V · I · R · P</button>
+      <div class="segmented compact" id="ohmsMode" role="group" aria-label="Calculator mode" style="margin-top:1.1rem;">
+        <button type="button" data-mode="virp" class="active">V·I·R·P</button>
         <button type="button" data-mode="pf">Power Factor</button>
+        <button type="button" data-mode="watt">Wattage Pie</button>
       </div>
 
       <div class="mode-panel active" id="ohmsPanelVirp">
@@ -428,6 +460,55 @@
 
         <p class="assumption">S = V·I (1φ/DC) or √3·V·I (3φ). P = S·PF, Q = √(S²−P²), θ = cos⁻¹(PF). Power factor is unitless (0–1) — a low PF means more current is needed to deliver the same true power, and utilities may bill a penalty for it.</p>
       </div>
+
+      <div class="mode-panel" id="ohmsPanelWatt">
+        <p class="view-intro">Add each load on the circuit to see its share of the total draw, and how much headroom is left on the breaker.</p>
+
+        <div class="form-row">
+          <div class="vfield">
+            <label for="wp-voltage">Circuit voltage</label>
+            <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="wp-voltage" value="120"><span class="unit">V</span></div>
+          </div>
+          <div class="vfield">
+            <label for="wp-breaker">Breaker size</label>
+            <div class="row">
+              <select id="wp-breaker" aria-label="Breaker size">
+                <option value="15">15 A</option>
+                <option value="20" selected>20 A</option>
+                <option value="25">25 A</option>
+                <option value="30">30 A</option>
+                <option value="40">40 A</option>
+                <option value="50">50 A</option>
+                <option value="60">60 A</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="load-list" id="wpLoadList"></div>
+        <template id="wpRowTemplate">
+          <div class="wp-row">
+            <input type="text" class="wp-name" aria-label="Load name">
+            <div class="wp-watt-wrap"><input type="number" inputmode="decimal" step="any" min="0" class="wp-watts" placeholder="0" aria-label="Load watts"><span class="unit">W</span></div>
+            <button type="button" class="wp-remove" aria-label="Remove load">×</button>
+          </div>
+        </template>
+        <button type="button" class="add-load-btn" id="wpAddLoad">+ Add load</button>
+
+        <div class="pie-wrap">
+          <div class="pie-chart" id="wpPie">
+            <div class="pie-center">
+              <div class="pie-total" id="wpPieTotal">0 W</div>
+              <div class="pie-sub" id="wpPieSub">—</div>
+            </div>
+          </div>
+          <div class="pie-legend" id="wpLegend"></div>
+        </div>
+
+        <div class="result-card" id="wpResult" role="status" aria-live="polite"></div>
+
+        <p class="assumption">Assumes every load is continuous (on 3+ hours). NEC 210.19(A)/210.20(A) call for continuous loads to stay at or below 80% of the breaker rating — a conservative check for general circuit planning.</p>
+      </div>
     </section>
 
     <!-- VOLTAGE DROP -->
@@ -520,7 +601,7 @@
   /* ---------------- tool registry (extend here for future calculators) ---------------- */
   var TOOLS = [
     { id:"ohms-law", name:"Ohm's Law &amp; Power", status:"ready",
-      desc:"Solve voltage, current, resistance and power from any two knowns, plus power factor and kVA.",
+      desc:"Solve voltage, current, resistance and power from any two knowns, plus power factor and a per-load wattage pie.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z" fill="var(--accent)" stroke="none"/></svg>' },
     { id:"voltage-drop", name:"Voltage Drop", status:"ready",
       desc:"Voltage drop, % drop, and required conductor size — single &amp; three phase.",
@@ -615,6 +696,10 @@
     if (abs === 0) entry = { scale:1, prefix:"" };
     var scaled = value / entry.scale;
     return formatNumber(scaled) + " " + entry.prefix + unit;
+  }
+  function fmt(n, decimals){
+    if (!isFinite(n)) return "—";
+    return n.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
   }
 
   function solve(known){
@@ -717,8 +802,8 @@
   /* ---------------- ohm's law / power factor mode switch ---------------- */
   var ohmsModeGroup = document.getElementById("ohmsMode");
   var ohmsTitleEl = document.getElementById("ohmsTitle");
-  var OHMS_PANELS = { virp: document.getElementById("ohmsPanelVirp"), pf: document.getElementById("ohmsPanelPf") };
-  var OHMS_TITLES = { virp: "Solve V · I · R · P", pf: "Power Factor & kVA" };
+  var OHMS_PANELS = { virp: document.getElementById("ohmsPanelVirp"), pf: document.getElementById("ohmsPanelPf"), watt: document.getElementById("ohmsPanelWatt") };
+  var OHMS_TITLES = { virp: "Solve V · I · R · P", pf: "Power Factor & kVA", watt: "Wattage Pie" };
   ohmsModeGroup.querySelectorAll("button").forEach(function(btn){
     btn.addEventListener("click", function(){
       ohmsModeGroup.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
@@ -786,11 +871,6 @@
       return { cls:"bad", label:"Poor — consider PF correction" };
     }
 
-    function fmt(n, decimals){
-      if (!isFinite(n)) return "—";
-      return n.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
-    }
-
     [vVoltage, vCurrent, knownInput].forEach(function(el){
       el.addEventListener("input", function(){
         if (el === knownInput && activeMode(knownGroup) === "pf"){
@@ -852,6 +932,129 @@
 
     syncKnownField();
     computePF();
+  })();
+
+  /* ---------------- wattage pie calculator ---------------- */
+  (function initWattagePie(){
+    var PIE_COLORS = ["#e8952f","#4fb0e0","#4caf7d","#e2574c","#a78bfa","#f2c14e","#f472b6","#94a3b8"];
+    var vVoltage = document.getElementById("wp-voltage");
+    var breakerSelect = document.getElementById("wp-breaker");
+    var listEl = document.getElementById("wpLoadList");
+    var rowTpl = document.getElementById("wpRowTemplate");
+    var addBtn = document.getElementById("wpAddLoad");
+    var pieEl = document.getElementById("wpPie");
+    var pieTotalEl = document.getElementById("wpPieTotal");
+    var pieSubEl = document.getElementById("wpPieSub");
+    var legendEl = document.getElementById("wpLegend");
+    var resultEl = document.getElementById("wpResult");
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, function(c){
+        return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+      });
+    }
+
+    function addRow(name, watts){
+      var node = rowTpl.content.firstElementChild.cloneNode(true);
+      var nameInput = node.querySelector(".wp-name");
+      var wattsInput = node.querySelector(".wp-watts");
+      nameInput.value = name || "";
+      nameInput.placeholder = "Load " + (listEl.children.length + 1);
+      wattsInput.value = watts != null ? watts : "";
+      node.querySelector(".wp-remove").addEventListener("click", function(){
+        node.remove();
+        computeWattagePie();
+      });
+      nameInput.addEventListener("input", computeWattagePie);
+      wattsInput.addEventListener("input", computeWattagePie);
+      listEl.appendChild(node);
+      return node;
+    }
+
+    addBtn.addEventListener("click", function(){
+      var node = addRow("", "");
+      computeWattagePie();
+      node.querySelector(".wp-name").focus();
+    });
+    vVoltage.addEventListener("input", computeWattagePie);
+    breakerSelect.addEventListener("change", computeWattagePie);
+
+    function classifyLoad(totalAmps, breakerAmps){
+      var contMax = breakerAmps * 0.8;
+      if (totalAmps <= contMax) return { cls:"ok", label:"Within 80% continuous rating" };
+      if (totalAmps <= breakerAmps) return { cls:"caution", label:"Exceeds 80% — non-continuous loads only" };
+      return { cls:"bad", label:"Exceeds breaker rating — reduce load" };
+    }
+
+    function computeWattagePie(){
+      var rows = Array.prototype.slice.call(listEl.querySelectorAll(".wp-row"));
+      var loads = rows.map(function(row, i){
+        var watts = parseFloat(row.querySelector(".wp-watts").value);
+        var name = row.querySelector(".wp-name").value.trim() || ("Load " + (i + 1));
+        return { name: name, watts: isFinite(watts) && watts > 0 ? watts : 0 };
+      });
+      var total = loads.reduce(function(sum, l){ return sum + l.watts; }, 0);
+
+      pieTotalEl.textContent = formatSI(total, "W");
+
+      if (total <= 0){
+        pieEl.style.background = "var(--border-soft)";
+        pieSubEl.textContent = "—";
+        legendEl.innerHTML = '<p class="hint">Add a load’s wattage to see the breakdown.</p>';
+        resultEl.innerHTML = "";
+        return;
+      }
+
+      var active = loads.filter(function(l){ return l.watts > 0; });
+      var stops = [];
+      var cursor = 0;
+      var legendHtml = "";
+      active.forEach(function(l, i){
+        var pct = (l.watts / total) * 100;
+        var color = PIE_COLORS[i % PIE_COLORS.length];
+        var start = cursor;
+        var end = cursor + pct;
+        stops.push(color + " " + start.toFixed(2) + "% " + end.toFixed(2) + "%");
+        cursor = end;
+        legendHtml +=
+          '<div class="legend-item">' +
+            '<span class="legend-swatch" style="background:' + color + ';"></span>' +
+            '<span class="legend-name">' + escapeHtml(l.name) + '</span>' +
+            '<span class="legend-value">' + formatSI(l.watts, "W") + ' · ' + fmt(pct, 0) + '%</span>' +
+          '</div>';
+      });
+      pieEl.style.background = "conic-gradient(" + stops.join(",") + ")";
+      legendEl.innerHTML = legendHtml;
+
+      var voltage = parseFloat(vVoltage.value);
+      if (!(voltage > 0)){
+        pieSubEl.textContent = "—";
+        resultEl.innerHTML = '<p class="hint">Enter circuit voltage to estimate current draw.</p>';
+        return;
+      }
+
+      var totalAmps = total / voltage;
+      pieSubEl.textContent = fmt(totalAmps, 1) + " A";
+
+      var breakerAmps = parseFloat(breakerSelect.value);
+      if (!(breakerAmps > 0)){
+        resultEl.innerHTML = "";
+        return;
+      }
+      var pctOfBreaker = (totalAmps / breakerAmps) * 100;
+      var tag = classifyLoad(totalAmps, breakerAmps);
+      resultEl.innerHTML =
+        '<div class="result-grid">' +
+          '<div class="result-stat"><div class="k">Total current</div><div class="v">' + fmt(totalAmps, 2) + ' A</div></div>' +
+          '<div class="result-stat"><div class="k">Of breaker</div><div class="v">' + fmt(pctOfBreaker, 0) + '%</div></div>' +
+        '</div>' +
+        '<span class="pct-chip ' + tag.cls + '">' + tag.label + '</span>';
+    }
+
+    addRow("Refrigerator", 700);
+    addRow("Microwave", 1200);
+    addRow("Lighting", 300);
+    computeWattagePie();
   })();
 
   /* ---------------- voltage drop calculator ---------------- */

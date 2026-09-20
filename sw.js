@@ -1,4 +1,4 @@
-const CACHE = "ctw-calc-v4";
+const CACHE = "ctw-calc-v5";
 const APP_SHELL = ["./", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
