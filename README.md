@@ -8,7 +8,7 @@ An installable, offline-capable PWA calculator toolkit for electricians. No buil
 
 ## What's here
 
-- **Ohm's Law & Power** — enter any two of Voltage, Current, Resistance, or Power; the other two solve live using all 12 Ohm's/Watt's law formulas. Values auto-format with SI prefixes (mA, kΩ, etc.), and a collapsible reference shows the full formula wheel.
+- **Ohm's Law & Power** — enter any two of Voltage, Current, Resistance, or Power; the other two solve live using all 12 Ohm's/Watt's law formulas. Values auto-format with SI prefixes (mA, kΩ, etc.), and a collapsible reference shows the full formula wheel. A mode switcher on the same page adds two more calculators: **Power Factor** (voltage, current, and phase solve apparent/true/reactive power and PF or vice versa) and **Wattage Pie** (list each load on a circuit to see a conic-gradient breakdown of its share of the total, current draw, and breaker headroom).
 
 ![Ohm's Law calculator](docs/screenshot-ohms-law.png)
 
@@ -16,11 +16,12 @@ An installable, offline-capable PWA calculator toolkit for electricians. No buil
 
 ![Voltage Drop calculator](docs/screenshot-voltage-drop.png)
 
+- **Wire Ampacity** — pick a conductor (copper/aluminum, 60/75/90°C insulation) and see its base ampacity from NEC Table 310.16, then derate it for ambient temperature (Table 310.15(B)(1)) and conductor count in the same raceway (Table 310.15(C)(1)), with an optional load-current check and a full ampacity reference table.
+
 ### Roadmap
 
 The home screen is a registry (`TOOLS` in `index.html`) with a few more field tools stubbed in as "coming soon":
 
-- Wire Ampacity — NEC Table 310.16 conductor sizing & derating
 - Conduit Fill — NEC Ch. 9 Table 4/5 raceway fill percentage
 - Box Fill — NEC 314.16 device box volume fill
 

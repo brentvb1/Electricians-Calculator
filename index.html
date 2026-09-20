@@ -583,6 +583,67 @@
         </div>
       </details>
     </section>
+
+    <!-- WIRE AMPACITY -->
+    <section class="view" id="view-ampacity" aria-labelledby="ampacityTitle">
+      <div class="eyebrow">Wire Ampacity</div>
+      <h1 id="ampacityTitle" style="font-size:1.55rem;">Conductor Ampacity &amp; Derating</h1>
+      <p class="view-intro">Pick a conductor and insulation rating, then apply ambient temperature and conductor-count derating per NEC 310.15.</p>
+
+      <div class="form-row">
+        <div>
+          <div class="segmented" id="ampMaterial" role="group" aria-label="Conductor material">
+            <button type="button" data-value="cu" class="active">Copper</button>
+            <button type="button" data-value="al">Aluminum</button>
+          </div>
+        </div>
+        <div>
+          <div class="segmented" id="ampTemp" role="group" aria-label="Insulation temperature rating">
+            <button type="button" data-value="60">60°C</button>
+            <button type="button" data-value="75" class="active">75°C</button>
+            <button type="button" data-value="90">90°C</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="vfield full">
+          <label for="amp-size">Conductor size</label>
+          <div class="row">
+            <select id="amp-size" aria-label="Conductor size"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row three">
+        <div class="vfield">
+          <label for="amp-ambient">Ambient temp</label>
+          <div class="row"><input type="number" inputmode="decimal" step="any" id="amp-ambient" value="40"><span class="unit">°C</span></div>
+        </div>
+        <div class="vfield">
+          <label for="amp-conductors">CCC in raceway</label>
+          <div class="row"><input type="number" inputmode="numeric" step="1" min="1" id="amp-conductors" value="6"><span class="unit">#</span></div>
+        </div>
+        <div class="vfield">
+          <label for="amp-load">Load current</label>
+          <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="amp-load" placeholder="optional"><span class="unit">A</span></div>
+        </div>
+      </div>
+
+      <div class="result-card" id="ampResult" role="status" aria-live="polite"></div>
+
+      <p class="assumption">Base ampacities from NEC Table 310.16, for not more than 3 current-carrying conductors (CCC) at 30°C ambient. Ambient correction per Table 310.15(B)(1); conductor-count adjustment per Table 310.15(C)(1), applied when CCC exceeds 3. Even a 90°C-rated conductor is often limited by 110.14(C) to the ampacity of its 75°C (or 60°C, for equipment ≤100A) termination rating — check equipment listings. Field estimate only; verify against the NEC edition adopted by your AHJ.</p>
+
+      <details class="ref">
+        <summary><svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 5l7 7-7 7"/></svg> Table 310.16 — base ampacities</summary>
+        <div class="ref-table-wrap">
+          <table class="ref-table" id="ampRefTable">
+            <thead><tr><th>Size</th><th>60°C</th><th>75°C</th><th>90°C</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
   </main>
 
   <footer id="homeFooter">
@@ -606,9 +667,9 @@
     { id:"voltage-drop", name:"Voltage Drop", status:"ready",
       desc:"Voltage drop, % drop, and required conductor size — single &amp; three phase.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg>' },
-    { id:"ampacity", name:"Wire Ampacity", status:"soon",
+    { id:"ampacity", name:"Wire Ampacity", status:"ready",
       desc:"NEC Table 310.16 conductor sizing and temperature derating.",
-      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>' },
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>' },
     { id:"conduit-fill", name:"Conduit Fill", status:"soon",
       desc:"NEC Ch. 9 Table 4/5 raceway fill percentage by conductor mix.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="2"/><circle cx="15" cy="14" r="2.4"/></svg>' },
@@ -644,7 +705,8 @@
   var views = {
     "": document.getElementById("view-home"),
     "ohms-law": document.getElementById("view-ohms-law"),
-    "voltage-drop": document.getElementById("view-voltage-drop")
+    "voltage-drop": document.getElementById("view-voltage-drop"),
+    "ampacity": document.getElementById("view-ampacity")
   };
 
   function render(){
@@ -701,6 +763,17 @@
     if (!isFinite(n)) return "—";
     return n.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
   }
+  function wireSegmented(group, onChange){
+    group.querySelectorAll("button").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        group.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
+        btn.classList.add("active");
+        onChange();
+      });
+    });
+  }
+  function activeValue(group){ return parseFloat(group.querySelector("button.active").getAttribute("data-value")); }
+  function activeMode(group){ return group.querySelector("button.active").getAttribute("data-value"); }
 
   function solve(known){
     var V = known.V, I = known.I, R = known.R, P = known.P;
@@ -827,18 +900,6 @@
     var quickChips = quickChipsWrap.querySelectorAll(".quick-chip");
     var resultEl = document.getElementById("pfResult");
 
-    function activeValue(group){ return parseFloat(group.querySelector("button.active").getAttribute("data-value")); }
-    function activeMode(group){ return group.querySelector("button.active").getAttribute("data-value"); }
-
-    function wireSegmented(group, onChange){
-      group.querySelectorAll("button").forEach(function(btn){
-        btn.addEventListener("click", function(){
-          group.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
-          btn.classList.add("active");
-          onChange();
-        });
-      });
-    }
     wireSegmented(phaseGroup, computePF);
     wireSegmented(knownGroup, function(){ syncKnownField(); computePF(); });
 
@@ -1101,26 +1162,8 @@
       refBody.appendChild(tr);
     });
 
-    function fmt(n, decimals){
-      if (!isFinite(n)) return "—";
-      return n.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
-    }
-
-    function wireSegmented(group, onChange){
-      group.querySelectorAll("button").forEach(function(btn){
-        btn.addEventListener("click", function(){
-          group.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
-          btn.classList.add("active");
-          onChange();
-        });
-      });
-    }
     wireSegmented(materialGroup, computeVD);
     wireSegmented(phaseGroup, computeVD);
-
-    function activeValue(group){
-      return parseFloat(group.querySelector("button.active").getAttribute("data-value"));
-    }
 
     quickChips.forEach(function(chip){
       chip.addEventListener("click", function(){
@@ -1219,6 +1262,194 @@
 
     syncTargetRow();
     computeVD();
+  })();
+
+  /* ---------------- wire ampacity calculator ---------------- */
+  /* NEC Table 310.16 base ampacities, 30C ambient, not more than 3 current-carrying conductors */
+  var AMPACITY = {
+    cu: [
+      { label:"14 AWG",  a60:15,  a75:20,  a90:25  },
+      { label:"12 AWG",  a60:20,  a75:25,  a90:30  },
+      { label:"10 AWG",  a60:30,  a75:35,  a90:40  },
+      { label:"8 AWG",   a60:40,  a75:50,  a90:55  },
+      { label:"6 AWG",   a60:55,  a75:65,  a90:75  },
+      { label:"4 AWG",   a60:70,  a75:85,  a90:95  },
+      { label:"3 AWG",   a60:85,  a75:100, a90:115 },
+      { label:"2 AWG",   a60:95,  a75:115, a90:130 },
+      { label:"1 AWG",   a60:110, a75:130, a90:145 },
+      { label:"1/0 AWG", a60:125, a75:150, a90:170 },
+      { label:"2/0 AWG", a60:145, a75:175, a90:195 },
+      { label:"3/0 AWG", a60:165, a75:200, a90:225 },
+      { label:"4/0 AWG", a60:195, a75:230, a90:260 },
+      { label:"250 kcmil", a60:215, a75:255, a90:290 },
+      { label:"300 kcmil", a60:240, a75:285, a90:320 },
+      { label:"350 kcmil", a60:260, a75:310, a90:350 },
+      { label:"400 kcmil", a60:280, a75:335, a90:380 },
+      { label:"500 kcmil", a60:320, a75:380, a90:430 },
+      { label:"600 kcmil", a60:355, a75:420, a90:475 },
+      { label:"700 kcmil", a60:385, a75:460, a90:520 },
+      { label:"750 kcmil", a60:400, a75:475, a90:535 },
+      { label:"800 kcmil", a60:410, a75:490, a90:555 },
+      { label:"900 kcmil", a60:435, a75:520, a90:585 },
+      { label:"1000 kcmil", a60:455, a75:545, a90:615 }
+    ],
+    al: [
+      { label:"12 AWG",  a60:15,  a75:20,  a90:25  },
+      { label:"10 AWG",  a60:25,  a75:30,  a90:35  },
+      { label:"8 AWG",   a60:30,  a75:40,  a90:45  },
+      { label:"6 AWG",   a60:40,  a75:50,  a90:55  },
+      { label:"4 AWG",   a60:55,  a75:65,  a90:75  },
+      { label:"3 AWG",   a60:65,  a75:75,  a90:85  },
+      { label:"2 AWG",   a60:75,  a75:90,  a90:100 },
+      { label:"1 AWG",   a60:85,  a75:100, a90:115 },
+      { label:"1/0 AWG", a60:100, a75:120, a90:135 },
+      { label:"2/0 AWG", a60:115, a75:135, a90:150 },
+      { label:"3/0 AWG", a60:130, a75:155, a90:175 },
+      { label:"4/0 AWG", a60:150, a75:180, a90:205 },
+      { label:"250 kcmil", a60:170, a75:205, a90:230 },
+      { label:"300 kcmil", a60:195, a75:230, a90:260 },
+      { label:"350 kcmil", a60:210, a75:250, a90:280 },
+      { label:"400 kcmil", a60:225, a75:270, a90:305 },
+      { label:"500 kcmil", a60:260, a75:310, a90:350 },
+      { label:"600 kcmil", a60:285, a75:340, a90:385 },
+      { label:"700 kcmil", a60:315, a75:375, a90:425 },
+      { label:"750 kcmil", a60:320, a75:385, a90:435 },
+      { label:"800 kcmil", a60:330, a75:395, a90:445 },
+      { label:"900 kcmil", a60:355, a75:425, a90:480 },
+      { label:"1000 kcmil", a60:375, a75:445, a90:500 }
+    ]
+  };
+
+  /* NEC Table 310.15(B)(1) ambient temperature correction factors (30C baseline) */
+  var AMBIENT_FACTORS = [
+    { max:10, f60:1.29, f75:1.20, f90:1.15 },
+    { max:15, f60:1.22, f75:1.15, f90:1.12 },
+    { max:20, f60:1.15, f75:1.11, f90:1.08 },
+    { max:25, f60:1.08, f75:1.05, f90:1.04 },
+    { max:30, f60:1.00, f75:1.00, f90:1.00 },
+    { max:35, f60:0.91, f75:0.94, f90:0.96 },
+    { max:40, f60:0.82, f75:0.88, f90:0.91 },
+    { max:45, f60:0.71, f75:0.82, f90:0.87 },
+    { max:50, f60:0.58, f75:0.75, f90:0.82 },
+    { max:55, f60:0.41, f75:0.67, f90:0.76 },
+    { max:60, f60:null, f75:0.58, f90:0.71 },
+    { max:65, f60:null, f75:0.47, f90:0.65 },
+    { max:70, f60:null, f75:0.33, f90:0.58 },
+    { max:75, f60:null, f75:null, f90:0.50 },
+    { max:80, f60:null, f75:null, f90:0.41 }
+  ];
+  function getAmbientFactor(ambientC, col){
+    for (var i = 0; i < AMBIENT_FACTORS.length; i++){
+      if (ambientC <= AMBIENT_FACTORS[i].max) return AMBIENT_FACTORS[i]["f" + col];
+    }
+    return null;
+  }
+
+  /* NEC Table 310.15(C)(1) adjustment factors for more than 3 current-carrying conductors */
+  function getCCCFactor(n){
+    if (!(n > 3)) return 1;
+    if (n <= 6) return 0.80;
+    if (n <= 9) return 0.70;
+    if (n <= 20) return 0.50;
+    if (n <= 30) return 0.45;
+    if (n <= 40) return 0.40;
+    return 0.35;
+  }
+
+  (function initAmpacity(){
+    var materialGroup = document.getElementById("ampMaterial");
+    var tempGroup = document.getElementById("ampTemp");
+    var sizeSelect = document.getElementById("amp-size");
+    var ambientInput = document.getElementById("amp-ambient");
+    var conductorsInput = document.getElementById("amp-conductors");
+    var loadInput = document.getElementById("amp-load");
+    var resultEl = document.getElementById("ampResult");
+    var refBody = document.querySelector("#ampRefTable tbody");
+
+    function populateSizes(material){
+      var list = AMPACITY[material];
+      var prevLabel = sizeSelect.options.length && sizeSelect.selectedIndex >= 0
+        ? sizeSelect.options[sizeSelect.selectedIndex].textContent : null;
+      sizeSelect.innerHTML = "";
+      list.forEach(function(c, i){
+        var opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = c.label;
+        sizeSelect.appendChild(opt);
+      });
+      var matchIdx = -1;
+      if (prevLabel){
+        for (var i = 0; i < list.length; i++){ if (list[i].label === prevLabel){ matchIdx = i; break; } }
+      }
+      sizeSelect.value = matchIdx >= 0 ? matchIdx : Math.min(4, list.length - 1);
+    }
+
+    function populateRefTable(material){
+      refBody.innerHTML = "";
+      AMPACITY[material].forEach(function(c){
+        var tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + c.label + "</td><td>" + c.a60 + "</td><td>" + c.a75 + "</td><td>" + c.a90 + "</td>";
+        refBody.appendChild(tr);
+      });
+    }
+
+    wireSegmented(materialGroup, function(){
+      var material = activeMode(materialGroup);
+      populateSizes(material);
+      populateRefTable(material);
+      computeAmpacity();
+    });
+    wireSegmented(tempGroup, computeAmpacity);
+    sizeSelect.addEventListener("change", computeAmpacity);
+    [ambientInput, conductorsInput, loadInput].forEach(function(el){
+      el.addEventListener("input", computeAmpacity);
+    });
+
+    function computeAmpacity(){
+      var material = activeMode(materialGroup);
+      var col = activeMode(tempGroup);
+      var conductor = AMPACITY[material][parseInt(sizeSelect.value, 10)];
+      var base = conductor["a" + col];
+
+      var ambient = parseFloat(ambientInput.value);
+      if (!isFinite(ambient)){
+        resultEl.innerHTML = '<p class="hint">Enter an ambient temperature.</p>';
+        return;
+      }
+      var ambientFactor = getAmbientFactor(ambient, col);
+      if (ambientFactor === null){
+        resultEl.innerHTML = '<p class="hint">No ' + col + '°C correction factor applies at this ambient — the conductor isn’t rated for use there. Pick a higher temperature rating or reduce ambient.</p>';
+        return;
+      }
+
+      var cccCount = parseInt(conductorsInput.value, 10);
+      var cccFactor = getCCCFactor(isFinite(cccCount) ? cccCount : 1);
+      var corrected = base * ambientFactor * cccFactor;
+
+      var html =
+        '<div class="result-grid">' +
+          '<div class="result-stat"><div class="k">Base ampacity</div><div class="v">' + base + ' A</div></div>' +
+          '<div class="result-stat"><div class="k">Allowable ampacity</div><div class="v">' + fmt(corrected, 1) + ' A</div></div>' +
+        '</div>' +
+        '<div class="result-grid" style="margin-top:.7rem;">' +
+          '<div class="result-stat"><div class="k">Ambient factor</div><div class="v" style="font-size:1.1rem;">×' + fmt(ambientFactor, 2) + '</div></div>' +
+          '<div class="result-stat"><div class="k">CCC adjustment</div><div class="v" style="font-size:1.1rem;">×' + fmt(cccFactor, 2) + '</div></div>' +
+        '</div>';
+
+      var loadA = parseFloat(loadInput.value);
+      if (loadA > 0){
+        var ok = corrected >= loadA;
+        html += '<span class="pct-chip ' + (ok ? "ok" : "bad") + '">' +
+          (ok ? "Covers " + fmt(loadA, 1) + " A load" : "Undersized for " + fmt(loadA, 1) + " A load") +
+          '</span>';
+      }
+
+      resultEl.innerHTML = html;
+    }
+
+    populateSizes("cu");
+    populateRefTable("cu");
+    computeAmpacity();
   })();
 
   /* ---------------- online / offline status ---------------- */
