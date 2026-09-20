@@ -1,4 +1,4 @@
-# CTW Field Tools
+# Electricians Calculator
 
 An installable, offline-capable PWA calculator toolkit for electricians. No build step, no framework, no backend — a single HTML file plus a manifest and service worker.
 
