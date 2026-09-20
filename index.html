@@ -205,6 +205,60 @@
   .quad .qf{ font-family:'JetBrains Mono',monospace; font-size:.72rem; color:var(--text-dim); line-height:1.5; }
 
   .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+  /* ---------- voltage drop view ---------- */
+  .segmented{ display:flex; background:var(--surface-2); border:1px solid var(--border); border-radius:12px; padding:3px; gap:3px; }
+  .segmented button{
+    flex:1; border:none; background:none; color:var(--text-dim); font-family:'Oswald',sans-serif;
+    font-size:.78rem; font-weight:600; letter-spacing:.02em; padding:.55rem .5rem; border-radius:9px; cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .segmented button.active{ background:var(--accent); color:var(--accent-ink); }
+  .segmented button:not(.active):hover{ color:var(--text); }
+
+  .form-row{ display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:.9rem; }
+  .form-row.three{ grid-template-columns:1fr 1fr 1fr; }
+  @media (max-width:520px){ .form-row.three{ grid-template-columns:1fr 1fr; } }
+  @media (max-width:360px){ .form-row{ grid-template-columns:1fr; } .form-row.three{ grid-template-columns:1fr; } }
+
+  .vfield{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:.7rem .85rem; }
+  .vfield label{ display:block; font-family:'Oswald',sans-serif; font-size:.68rem; font-weight:600; letter-spacing:.04em; color:var(--text-faint); text-transform:uppercase; margin-bottom:.28rem; }
+  .vfield .row{ display:flex; align-items:baseline; gap:.35rem; }
+  .vfield input, .vfield select{
+    width:100%; min-width:0; background:none; border:none; color:var(--text);
+    font-family:'JetBrains Mono',monospace; font-size:1.1rem; font-weight:600; padding:.05rem 0;
+  }
+  .vfield input::-webkit-outer-spin-button, .vfield input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .vfield input[type="number"]{ -moz-appearance:textfield; }
+  .vfield input:focus, .vfield select:focus{ outline:none; }
+  .vfield select{ appearance:none; -webkit-appearance:none; cursor:pointer; font-size:.92rem; }
+  .vfield .unit{ font-family:'JetBrains Mono',monospace; font-size:.82rem; color:var(--text-dim); flex-shrink:0; }
+  .vfield.full{ grid-column:1 / -1; }
+
+  .quick-chips{ display:flex; gap:.4rem; margin-top:.55rem; flex-wrap:wrap; }
+  .quick-chip{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text-dim); font-size:.72rem; font-weight:700;
+    padding:.32rem .65rem; border-radius:999px; cursor:pointer;
+  }
+  .quick-chip:hover{ border-color:var(--accent-border); color:var(--text); }
+  .quick-chip.active{ background:var(--accent-soft); border-color:var(--accent-border); color:var(--accent); }
+
+  .result-card{ margin-top:1.2rem; background:var(--surface-2); border:1px solid var(--border); border-radius:16px; padding:1.1rem 1.1rem 1.2rem; }
+  .result-card .k{ font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); font-weight:600; }
+  .result-grid{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-top:.7rem; }
+  .result-stat .v{ font-family:'JetBrains Mono',monospace; font-size:1.5rem; font-weight:600; margin-top:.15rem; }
+  .result-stat .sub{ font-size:.72rem; color:var(--text-dim); margin-top:.15rem; }
+  .pct-chip{ display:inline-flex; align-items:center; gap:.35rem; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; padding:.28rem .6rem; border-radius:999px; margin-top:.55rem; }
+  .pct-chip.ok{ background:var(--good-soft); color:var(--good); }
+  .pct-chip.caution{ background:var(--accent-soft); color:var(--accent); }
+  .pct-chip.bad{ background:var(--danger-soft); color:var(--danger); }
+
+  .ref-table-wrap{ overflow-x:auto; margin-top:.8rem; }
+  .ref-table{ width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:.76rem; }
+  .ref-table th{ text-align:left; font-family:'Oswald',sans-serif; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase; color:var(--text-faint); font-weight:600; padding:.4rem .6rem; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .ref-table td{ padding:.32rem .6rem; border-bottom:1px solid var(--border-soft); color:var(--text-dim); white-space:nowrap; }
+  .ref-table td:first-child{ color:var(--text); font-weight:600; }
+  .ref-table tr:last-child td{ border-bottom:none; }
 </style>
 
 <div class="app" id="app">
@@ -316,6 +370,79 @@
         </div>
       </details>
     </section>
+
+    <!-- VOLTAGE DROP -->
+    <section class="view" id="view-voltage-drop" aria-labelledby="vdTitle">
+      <div class="eyebrow">Voltage Drop</div>
+      <h1 id="vdTitle" style="font-size:1.55rem;">Drop &amp; Conductor Size</h1>
+      <p class="view-intro">Pick a conductor to check its drop, or leave the size unknown to solve for the minimum conductor that hits your target.</p>
+
+      <div class="form-row">
+        <div>
+          <div class="segmented" id="vdMaterial" role="group" aria-label="Conductor material">
+            <button type="button" data-value="12.9" class="active">Copper</button>
+            <button type="button" data-value="21.2">Aluminum</button>
+          </div>
+        </div>
+        <div>
+          <div class="segmented" id="vdPhase" role="group" aria-label="System">
+            <button type="button" data-value="2" class="active">1φ / DC</button>
+            <button type="button" data-value="1.732">3φ</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row three">
+        <div class="vfield">
+          <label for="vd-voltage">Source volts</label>
+          <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="vd-voltage" value="120"><span class="unit">V</span></div>
+        </div>
+        <div class="vfield">
+          <label for="vd-current">Load current</label>
+          <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="vd-current" value="20"><span class="unit">A</span></div>
+        </div>
+        <div class="vfield">
+          <label for="vd-distance">One-way length</label>
+          <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="vd-distance" value="100"><span class="unit">ft</span></div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="vfield full">
+          <label for="vd-size">Conductor size</label>
+          <div class="row">
+            <select id="vd-size" aria-label="Conductor size">
+              <option value="solve">— Unknown: solve for size —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" id="vdTargetRow">
+        <div class="vfield full">
+          <label for="vd-target">Target voltage drop</label>
+          <div class="row"><input type="number" inputmode="decimal" step="any" min="0.1" id="vd-target" value="3"><span class="unit">%</span></div>
+          <div class="quick-chips">
+            <button type="button" class="quick-chip active" data-pct="3">3% branch</button>
+            <button type="button" class="quick-chip" data-pct="5">5% total</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card" id="vdResult" role="status" aria-live="polite"></div>
+
+      <p class="assumption">Uses the constant-K method — VD = 2·K·I·D⁄CM (1φ/DC) or √3·K·I·D⁄CM (3φ) — with K = 12.9 (copper) or 21.2 (aluminum) Ω·cmil/ft. Good for field estimates; NEC recommends ≤3% for a branch circuit or feeder and ≤5% total (branch + feeder) for reasonable efficiency — these are informational, not code minimums.</p>
+
+      <details class="ref">
+        <summary><svg class="chev" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 5l7 7-7 7"/></svg> Conductor sizes &amp; circular mils</summary>
+        <div class="ref-table-wrap">
+          <table class="ref-table" id="vdRefTable">
+            <thead><tr><th>Size</th><th>Circular mils</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </details>
+    </section>
   </main>
 
   <footer id="homeFooter">
@@ -323,7 +450,7 @@
       <p class="foot-note">Works offline once loaded. On iPhone: Share → Add to Home Screen.</p>
       <button class="install-btn" id="installBtn" type="button">Install app</button>
     </div>
-    <div class="version">CTW Automation · v0.1 · Ohm's Law &amp; Power</div>
+    <div class="version">CTW Automation · v0.2 · Ohm's Law, Power &amp; Voltage Drop</div>
   </footer>
 </div>
 
@@ -336,9 +463,9 @@
     { id:"ohms-law", name:"Ohm's Law &amp; Power", status:"ready",
       desc:"Solve voltage, current, resistance and power from any two knowns.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M13 2 3 14h7l-1 8 11-14h-7l1-6z" fill="var(--accent)" stroke="none"/></svg>' },
-    { id:"voltage-drop", name:"Voltage Drop", status:"soon",
-      desc:"NEC Ch. 9 conductor voltage drop — single &amp; three phase.",
-      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg>' },
+    { id:"voltage-drop", name:"Voltage Drop", status:"ready",
+      desc:"Voltage drop, % drop, and required conductor size — single &amp; three phase.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 12h4l2-7 4 14 2-7h4"/></svg>' },
     { id:"ampacity", name:"Wire Ampacity", status:"soon",
       desc:"NEC Table 310.16 conductor sizing and temperature derating.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>' },
@@ -376,7 +503,8 @@
   var toolNameLabel = document.getElementById("toolNameLabel");
   var views = {
     "": document.getElementById("view-home"),
-    "ohms-law": document.getElementById("view-ohms-law")
+    "ohms-law": document.getElementById("view-ohms-law"),
+    "voltage-drop": document.getElementById("view-voltage-drop")
   };
 
   function render(){
@@ -526,6 +654,170 @@
   });
 
   recompute();
+
+  /* ---------------- voltage drop calculator ---------------- */
+  var CONDUCTORS = [
+    { label:"14 AWG",  cmil:4110 },   { label:"12 AWG",  cmil:6530 },
+    { label:"10 AWG",  cmil:10380 },  { label:"8 AWG",   cmil:16510 },
+    { label:"6 AWG",   cmil:26240 },  { label:"4 AWG",   cmil:41740 },
+    { label:"3 AWG",   cmil:52620 },  { label:"2 AWG",   cmil:66360 },
+    { label:"1 AWG",   cmil:83690 },  { label:"1/0 AWG", cmil:105600 },
+    { label:"2/0 AWG", cmil:133100 }, { label:"3/0 AWG", cmil:167800 },
+    { label:"4/0 AWG", cmil:211600 }, { label:"250 kcmil", cmil:250000 },
+    { label:"300 kcmil", cmil:300000 }, { label:"350 kcmil", cmil:350000 },
+    { label:"400 kcmil", cmil:400000 }, { label:"500 kcmil", cmil:500000 },
+    { label:"600 kcmil", cmil:600000 }, { label:"700 kcmil", cmil:700000 },
+    { label:"750 kcmil", cmil:750000 }, { label:"1000 kcmil", cmil:1000000 }
+  ];
+
+  (function initVoltageDrop(){
+    var materialGroup = document.getElementById("vdMaterial");
+    var phaseGroup = document.getElementById("vdPhase");
+    var vVoltage = document.getElementById("vd-voltage");
+    var vCurrent = document.getElementById("vd-current");
+    var vDistance = document.getElementById("vd-distance");
+    var vSize = document.getElementById("vd-size");
+    var vTargetRow = document.getElementById("vdTargetRow");
+    var vTarget = document.getElementById("vd-target");
+    var quickChips = document.querySelectorAll("#vdTargetRow .quick-chip");
+    var resultEl = document.getElementById("vdResult");
+    var refBody = document.querySelector("#vdRefTable tbody");
+
+    // populate size <select> with standard conductor sizes
+    CONDUCTORS.forEach(function(c){
+      var opt = document.createElement("option");
+      opt.value = String(c.cmil);
+      opt.textContent = c.label + " (" + c.cmil.toLocaleString() + " cmil)";
+      vSize.appendChild(opt);
+    });
+    vSize.value = "41740"; // "4 AWG" cmil, a sensible default
+
+    // populate reference table
+    CONDUCTORS.forEach(function(c){
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + c.label + "</td><td>" + c.cmil.toLocaleString() + "</td>";
+      refBody.appendChild(tr);
+    });
+
+    function fmt(n, decimals){
+      if (!isFinite(n)) return "—";
+      return n.toLocaleString(undefined, { minimumFractionDigits:decimals, maximumFractionDigits:decimals });
+    }
+
+    function wireSegmented(group, onChange){
+      group.querySelectorAll("button").forEach(function(btn){
+        btn.addEventListener("click", function(){
+          group.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
+          btn.classList.add("active");
+          onChange();
+        });
+      });
+    }
+    wireSegmented(materialGroup, computeVD);
+    wireSegmented(phaseGroup, computeVD);
+
+    function activeValue(group){
+      return parseFloat(group.querySelector("button.active").getAttribute("data-value"));
+    }
+
+    quickChips.forEach(function(chip){
+      chip.addEventListener("click", function(){
+        quickChips.forEach(function(c){ c.classList.remove("active"); });
+        chip.classList.add("active");
+        vTarget.value = chip.getAttribute("data-pct");
+        computeVD();
+      });
+    });
+
+    function syncTargetRow(){
+      vTargetRow.style.display = vSize.value === "solve" ? "grid" : "none";
+    }
+
+    [vVoltage, vCurrent, vDistance, vTarget].forEach(function(el){
+      el.addEventListener("input", function(){
+        if (el === vTarget){
+          var pct = vTarget.value;
+          quickChips.forEach(function(c){ c.classList.toggle("active", c.getAttribute("data-pct") === pct); });
+        }
+        computeVD();
+      });
+    });
+    vSize.addEventListener("change", function(){ syncTargetRow(); computeVD(); });
+
+    function classify(pct){
+      if (pct <= 3) return { cls:"ok", label:"Within 3% branch guideline" };
+      if (pct <= 5) return { cls:"caution", label:"Within 5% total guideline" };
+      return { cls:"bad", label:"Exceeds 5% NEC recommendation" };
+    }
+
+    function computeVD(){
+      var K = activeValue(materialGroup);
+      var factor = activeValue(phaseGroup);
+      var V = parseFloat(vVoltage.value);
+      var I = parseFloat(vCurrent.value);
+      var D = parseFloat(vDistance.value);
+
+      if (!(V > 0) || !(I >= 0) || !(D >= 0)){
+        resultEl.innerHTML = '<p class="hint">Enter source voltage, current, and one-way length.</p>';
+        return;
+      }
+
+      if (vSize.value === "solve"){
+        var targetPct = parseFloat(vTarget.value);
+        if (!(targetPct > 0)){
+          resultEl.innerHTML = '<p class="hint">Enter a target % voltage drop greater than 0.</p>';
+          return;
+        }
+        var vdTarget = (targetPct / 100) * V;
+        if (!(vdTarget > 0) || I === 0){
+          resultEl.innerHTML = '<p class="hint">Enter a load current to solve for conductor size.</p>';
+          return;
+        }
+        var cmReq = (factor * K * I * D) / vdTarget;
+        var pick = null;
+        for (var i = 0; i < CONDUCTORS.length; i++){
+          if (CONDUCTORS[i].cmil >= cmReq){ pick = CONDUCTORS[i]; break; }
+        }
+        if (!pick){
+          resultEl.innerHTML =
+            '<div class="k">Required circular mils</div>' +
+            '<div class="result-stat"><div class="v">' + fmt(cmReq, 0) + ' cmil</div>' +
+            '<div class="sub">Exceeds the largest standard single conductor (1000 kcmil) — consider parallel conductors per NEC 310.10(G).</div></div>';
+          return;
+        }
+        var actualVD = (factor * K * I * D) / pick.cmil;
+        var actualPct = (actualVD / V) * 100;
+        var tag = classify(actualPct);
+        resultEl.innerHTML =
+          '<div class="k">Recommended conductor</div>' +
+          '<div class="result-stat"><div class="v">' + pick.label + '</div>' +
+          '<div class="sub">' + pick.cmil.toLocaleString() + ' cmil (needs ≥ ' + fmt(cmReq, 0) + ' cmil)</div></div>' +
+          '<div class="result-grid">' +
+            '<div class="result-stat"><div class="k">Actual drop</div><div class="v">' + fmt(actualVD, 2) + ' V</div></div>' +
+            '<div class="result-stat"><div class="k">Actual % drop</div><div class="v">' + fmt(actualPct, 2) + '%</div></div>' +
+          '</div>' +
+          '<span class="pct-chip ' + tag.cls + '">' + tag.label + '</span>';
+        return;
+      }
+
+      var CM = parseFloat(vSize.value);
+      var vd = (factor * K * I * D) / CM;
+      var pct = (vd / V) * 100;
+      var endV = V - vd;
+      var tag2 = classify(pct);
+      resultEl.innerHTML =
+        '<div class="result-grid">' +
+          '<div class="result-stat"><div class="k">Voltage drop</div><div class="v">' + fmt(vd, 2) + ' V</div></div>' +
+          '<div class="result-stat"><div class="k">% drop</div><div class="v">' + fmt(pct, 2) + '%</div></div>' +
+          '<div class="result-stat"><div class="k">Voltage at load</div><div class="v">' + fmt(endV, 1) + ' V</div></div>' +
+          '<div class="result-stat"><div class="k">Conductor</div><div class="v" style="font-size:1.1rem;">' + vSize.options[vSize.selectedIndex].textContent.replace(/\s*\(.*\)$/, "") + '</div></div>' +
+        '</div>' +
+        '<span class="pct-chip ' + tag2.cls + '">' + tag2.label + '</span>';
+    }
+
+    syncTargetRow();
+    computeVD();
+  })();
 
   /* ---------------- online / offline status ---------------- */
   var statusBadge = document.getElementById("statusBadge");

@@ -12,11 +12,14 @@ An installable, offline-capable PWA calculator toolkit for electricians. No buil
 
 ![Ohm's Law calculator](docs/screenshot-ohms-law.png)
 
+- **Voltage Drop** — pick a conductor (copper/aluminum, 1φ/DC or 3φ) to check its voltage drop and % drop against the NEC's informational 3%/5% guidelines, or leave the size unknown and it solves for the minimum standard conductor that hits a target % drop. Uses the constant-K method (K = 12.9 copper / 21.2 aluminum) with a full circular-mils reference table.
+
+![Voltage Drop calculator](docs/screenshot-voltage-drop.png)
+
 ### Roadmap
 
 The home screen is a registry (`TOOLS` in `index.html`) with a few more field tools stubbed in as "coming soon":
 
-- Voltage Drop — NEC Ch. 9 conductor voltage drop, single & three phase
 - Wire Ampacity — NEC Table 310.16 conductor sizing & derating
 - Conduit Fill — NEC Ch. 9 Table 4/5 raceway fill percentage
 - Box Fill — NEC 314.16 device box volume fill
