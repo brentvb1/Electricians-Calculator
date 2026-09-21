@@ -297,6 +297,14 @@
   .ref-table td{ padding:.32rem .6rem; border-bottom:1px solid var(--border-soft); color:var(--text-dim); white-space:nowrap; }
   .ref-table td:first-child{ color:var(--text); font-weight:600; }
   .ref-table tr:last-child td{ border-bottom:none; }
+
+  /* ---------- motor data ---------- */
+  .spec-row{ display:flex; align-items:baseline; justify-content:space-between; gap:.8rem; padding:.55rem 0; border-bottom:1px solid var(--border-soft); }
+  .spec-row:last-child{ border-bottom:none; }
+  .spec-k{ font-size:.8rem; color:var(--text-dim); }
+  .spec-v{ font-family:'JetBrains Mono',monospace; font-weight:600; font-size:.95rem; flex-shrink:0; text-align:right; }
+  .spec-group{ font-family:'Oswald',sans-serif; font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); padding-top:.9rem; }
+  .spec-group:first-child{ padding-top:0; }
 </style>
 
 <div class="app" id="app">
@@ -644,6 +652,33 @@
         </div>
       </details>
     </section>
+
+    <!-- 3-PHASE MOTOR DATA -->
+    <section class="view" id="view-motor-data" aria-labelledby="motorTitle">
+      <div class="eyebrow">3-Phase Motor Data</div>
+      <h1 id="motorTitle" style="font-size:1.55rem;">FLC, Starter &amp; Protection</h1>
+      <p class="view-intro">Pick a voltage and horsepower to pull NEC full-load current, NEMA starter size, minimum conductor, and branch-circuit protection sizing.</p>
+
+      <div class="segmented" id="motorVoltage" role="group" aria-label="Motor voltage">
+        <button type="button" data-value="200">200V</button>
+        <button type="button" data-value="230" class="active">230V</button>
+        <button type="button" data-value="460">460V</button>
+        <button type="button" data-value="575">575V</button>
+      </div>
+
+      <div class="form-row" style="margin-top:.9rem;">
+        <div class="vfield full">
+          <label for="motor-hp">Motor horsepower</label>
+          <div class="row">
+            <select id="motor-hp" aria-label="Motor horsepower"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card" id="motorResult" role="status" aria-live="polite"></div>
+
+      <p class="assumption">Full-load current from NEC Table 430.250 (3-phase, other than wound-rotor). NEMA starter size from NEMA ICS 2 full-voltage, non-plugging ratings — 460V and 575V share the same size chart. Minimum copper conductor is 125% × FLC (NEC 430.22) checked against Table 310.16's 75°C column; the size shown applies to THW, THHN-THWN, and XHHW alike, since most equipment terminations are limited to 75°C regardless of the conductor's own insulation rating (110.14(C)). Branch-circuit protection uses NEC Table 430.52 percentages for other than wound-rotor/synchronous motors — 175% dual-element fuse, 250% inverse-time breaker, 800% instantaneous-trip breaker — rounded up to the next standard device rating (240.6(A)). Field estimate only; verify against the NEC edition adopted by your AHJ and the motor's actual nameplate.</p>
+    </section>
   </main>
 
   <footer id="homeFooter">
@@ -670,6 +705,9 @@
     { id:"ampacity", name:"Wire Ampacity", status:"ready",
       desc:"NEC Table 310.16 conductor sizing and temperature derating.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>' },
+    { id:"motor-data", name:"3-Phase Motor Data", status:"ready",
+      desc:"FLC, NEMA starter size, wire, and OCPD sizing for 200/230/460/575V motors.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>' },
     { id:"conduit-fill", name:"Conduit Fill", status:"soon",
       desc:"NEC Ch. 9 Table 4/5 raceway fill percentage by conductor mix.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="2"/><circle cx="15" cy="14" r="2.4"/></svg>' },
@@ -706,7 +744,8 @@
     "": document.getElementById("view-home"),
     "ohms-law": document.getElementById("view-ohms-law"),
     "voltage-drop": document.getElementById("view-voltage-drop"),
-    "ampacity": document.getElementById("view-ampacity")
+    "ampacity": document.getElementById("view-ampacity"),
+    "motor-data": document.getElementById("view-motor-data")
   };
 
   function render(){
@@ -1450,6 +1489,113 @@
     populateSizes("cu");
     populateRefTable("cu");
     computeAmpacity();
+  })();
+
+  /* ---------------- 3-phase motor data ---------------- */
+  /* NEC Table 430.250 full-load current, 3-phase AC motors (other than wound-rotor) */
+  var MOTOR_FLC = [
+    { hp:0.5,  label:"1/2",   flc200:2.5,  flc230:2.2,  flc460:1.1,  flc575:0.9 },
+    { hp:0.75, label:"3/4",   flc200:3.7,  flc230:3.2,  flc460:1.6,  flc575:1.3 },
+    { hp:1,    label:"1",     flc200:4.8,  flc230:4.2,  flc460:2.1,  flc575:1.7 },
+    { hp:1.5,  label:"1 1/2", flc200:6.9,  flc230:6,    flc460:3,    flc575:2.4 },
+    { hp:2,    label:"2",     flc200:7.8,  flc230:6.8,  flc460:3.4,  flc575:2.7 },
+    { hp:3,    label:"3",     flc200:11,   flc230:9.6,  flc460:4.8,  flc575:3.9 },
+    { hp:5,    label:"5",     flc200:17.5, flc230:15.2, flc460:7.6,  flc575:6.1 },
+    { hp:7.5,  label:"7 1/2", flc200:25.3, flc230:22,   flc460:11,   flc575:9 },
+    { hp:10,   label:"10",    flc200:32.2, flc230:28,   flc460:14,   flc575:11 },
+    { hp:15,   label:"15",    flc200:48.3, flc230:42,   flc460:21,   flc575:17 },
+    { hp:20,   label:"20",    flc200:62.1, flc230:54,   flc460:27,   flc575:22 },
+    { hp:25,   label:"25",    flc200:78.2, flc230:68,   flc460:34,   flc575:27 },
+    { hp:30,   label:"30",    flc200:92,   flc230:80,   flc460:40,   flc575:32 },
+    { hp:40,   label:"40",    flc200:120,  flc230:104,  flc460:52,   flc575:41 },
+    { hp:50,   label:"50",    flc200:150,  flc230:130,  flc460:65,   flc575:52 },
+    { hp:60,   label:"60",    flc200:177,  flc230:154,  flc460:77,   flc575:62 },
+    { hp:75,   label:"75",    flc200:221,  flc230:192,  flc460:96,   flc575:77 },
+    { hp:100,  label:"100",   flc200:285,  flc230:248,  flc460:124,  flc575:99 },
+    { hp:125,  label:"125",   flc200:359,  flc230:312,  flc460:156,  flc575:125 },
+    { hp:150,  label:"150",   flc200:414,  flc230:360,  flc460:180,  flc575:144 },
+    { hp:200,  label:"200",   flc200:552,  flc230:480,  flc460:240,  flc575:192 }
+  ];
+
+  /* NEMA ICS 2 full-voltage starter sizes — max HP, non-plugging duty (460V and 575V share a chart) */
+  var NEMA_SIZES = [
+    { size:"00", hp200:1.5, hp230:1.5, hp460:2 },
+    { size:"0",  hp200:3,   hp230:3,   hp460:5 },
+    { size:"1",  hp200:7.5, hp230:7.5, hp460:10 },
+    { size:"2",  hp200:10,  hp230:15,  hp460:25 },
+    { size:"3",  hp200:25,  hp230:35,  hp460:50 },
+    { size:"4",  hp200:40,  hp230:50,  hp460:100 },
+    { size:"5",  hp200:75,  hp230:100, hp460:200 },
+    { size:"6",  hp200:150, hp230:200, hp460:400 },
+    { size:"7",  hp200:null, hp230:300, hp460:600 },
+    { size:"8",  hp200:null, hp230:450, hp460:900 },
+    { size:"9",  hp200:null, hp230:800, hp460:1600 }
+  ];
+
+  /* NEC 240.6(A) standard overcurrent device ratings */
+  var STANDARD_OCPD = [15,20,25,30,35,40,45,50,60,70,80,90,100,110,125,150,175,200,225,250,300,350,400,450,500,600,700,800,1000,1200,1600,2000,2500,3000,4000,5000,6000];
+  function roundUpStandard(x){
+    for (var i = 0; i < STANDARD_OCPD.length; i++){ if (STANDARD_OCPD[i] >= x) return STANDARD_OCPD[i]; }
+    return Math.ceil(x / 100) * 100;
+  }
+
+  function pickMinWireSize(requiredAmpacity){
+    var list = AMPACITY.cu;
+    for (var i = 0; i < list.length; i++){ if (list[i].a75 >= requiredAmpacity) return list[i].label; }
+    return "> 1000 kcmil — parallel conductors";
+  }
+
+  function getNemaSize(hpValue, voltage){
+    var key = voltage === "200" ? "hp200" : voltage === "230" ? "hp230" : "hp460";
+    for (var i = 0; i < NEMA_SIZES.length; i++){
+      var maxHp = NEMA_SIZES[i][key];
+      if (maxHp != null && hpValue <= maxHp) return NEMA_SIZES[i].size;
+    }
+    return null;
+  }
+
+  (function initMotorData(){
+    var voltageGroup = document.getElementById("motorVoltage");
+    var hpSelect = document.getElementById("motor-hp");
+    var resultEl = document.getElementById("motorResult");
+
+    MOTOR_FLC.forEach(function(m, i){
+      var opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = m.label + " HP";
+      hpSelect.appendChild(opt);
+    });
+    hpSelect.value = 8; // 10 HP — a common default
+
+    wireSegmented(voltageGroup, computeMotorData);
+    hpSelect.addEventListener("change", computeMotorData);
+
+    function computeMotorData(){
+      var voltage = activeMode(voltageGroup);
+      var motor = MOTOR_FLC[parseInt(hpSelect.value, 10)];
+      var flc = motor["flc" + voltage];
+
+      var nemaSize = getNemaSize(motor.hp, voltage);
+      var wireSize = pickMinWireSize(flc * 1.25);
+      var fuse = roundUpStandard(flc * 1.75);
+      var invTimeCB = roundUpStandard(flc * 2.50);
+      var instCB = roundUpStandard(flc * 8.00);
+
+      resultEl.innerHTML =
+        '<div class="spec-group">Motor</div>' +
+        '<div class="spec-row"><span class="spec-k">NEC full-load current</span><span class="spec-v">' + fmt(flc, 1) + ' A</span></div>' +
+        '<div class="spec-row"><span class="spec-k">NEMA starter size</span><span class="spec-v">' + (nemaSize || "Exceeds chart") + '</span></div>' +
+        '<div class="spec-group">Minimum conductor — 75°C Cu</div>' +
+        '<div class="spec-row"><span class="spec-k">THW</span><span class="spec-v">' + wireSize + '</span></div>' +
+        '<div class="spec-row"><span class="spec-k">THHN-THWN</span><span class="spec-v">' + wireSize + '</span></div>' +
+        '<div class="spec-row"><span class="spec-k">XHHW</span><span class="spec-v">' + wireSize + '</span></div>' +
+        '<div class="spec-group">Branch-circuit protection — max</div>' +
+        '<div class="spec-row"><span class="spec-k">Dual-element time-delay fuse (175%)</span><span class="spec-v">' + fuse + ' A</span></div>' +
+        '<div class="spec-row"><span class="spec-k">Inverse-time circuit breaker (250%)</span><span class="spec-v">' + invTimeCB + ' A</span></div>' +
+        '<div class="spec-row"><span class="spec-k">Instantaneous-trip breaker (800%)</span><span class="spec-v">' + instCB + ' A</span></div>';
+    }
+
+    computeMotorData();
   })();
 
   /* ---------------- online / offline status ---------------- */
