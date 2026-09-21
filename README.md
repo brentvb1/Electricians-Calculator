@@ -18,7 +18,9 @@ An installable, offline-capable PWA calculator toolkit for electricians. No buil
 
 - **Wire Ampacity** — pick a conductor (copper/aluminum, 60/75/90°C insulation) and see its base ampacity from NEC Table 310.16, then derate it for ambient temperature (Table 310.15(B)(1)) and conductor count in the same raceway (Table 310.15(C)(1)), with an optional load-current check and a full ampacity reference table.
 
-- **3-Phase Motor Data** — pick a voltage (200/230/460/575V) and horsepower and get a full motor data card: NEC full-load current (Table 430.250), NEMA starter size, minimum THW/THHN-THWN/XHHW conductor (125% × FLC against Table 310.16's 75°C column), and branch-circuit protection sizing (dual-element fuse, inverse-time breaker, instantaneous-trip breaker) per Table 430.52, rounded to standard device ratings.
+- **3-Phase Motor Data** — pick a voltage (200/230/460/575V) and horsepower and get a full motor data card: NEC full-load current (Table 430.250), NEMA starter size, minimum THW/THHN-THWN/XHHW conductor (125% × FLC against Table 310.16's 60°C or 75°C column, per the 110.14(C) termination rule), and branch-circuit protection sizing (dual-element fuse, inverse-time breaker, instantaneous-trip breaker) per Table 430.52, rounded to standard device ratings.
+
+- **Transformer FLC** — enter a transformer's kVA rating (single- or three-phase) and get full-load current at common secondary voltages (120/240/480V single-phase; 208/240/480V three-phase).
 
 ### Roadmap
 
