@@ -22,11 +22,12 @@ An installable, offline-capable PWA calculator toolkit for electricians. No buil
 
 - **Transformer FLC** — enter a transformer's kVA rating (single- or three-phase) and get full-load current at common secondary voltages (120/240/480V single-phase; 208/240/480V three-phase).
 
+- **Conduit Fill** — add each conductor going into a raceway (EMT, IMC, RMC, or PVC Schedule 40) and check its fill against NEC Chapter 9 Table 1 (53%/31%/40%), or leave the trade size unknown to solve for the minimum standard size. Areas come from Table 4 (raceway) and Table 5 (THHN/THWN-2, TW/THW/THHW, XHHW/XHHW-2 conductors).
+
 ### Roadmap
 
 The home screen is a registry (`TOOLS` in `index.html`) with a few more field tools stubbed in as "coming soon":
 
-- Conduit Fill — NEC Ch. 9 Table 4/5 raceway fill percentage
 - Box Fill — NEC 314.16 device box volume fill
 
 Adding a new tool means adding an entry to `TOOLS`, a new `<section class="view">`, and a route in `views` — the shell (header, back button, install prompt, offline caching) is already wired up to handle it.

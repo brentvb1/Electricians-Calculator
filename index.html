@@ -243,6 +243,9 @@
   .add-load-btn{ display:flex; align-items:center; justify-content:center; gap:.4rem; width:100%; margin-top:.6rem; background:var(--surface-2); border:1px dashed var(--border); color:var(--text-dim); font-size:.82rem; font-weight:700; padding:.6rem; border-radius:12px; cursor:pointer; }
   .add-load-btn:hover{ color:var(--text); border-color:var(--accent-border); }
 
+  .wp-row select.cf-cond-size{ flex:1; min-width:0; background:none; border:none; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:.85rem; font-weight:600; padding:.2rem 0; appearance:none; -webkit-appearance:none; cursor:pointer; }
+  .wp-watt-wrap.qty{ width:4.4rem; }
+
   .pie-wrap{ display:flex; align-items:center; gap:1.3rem; margin-top:1.4rem; flex-wrap:wrap; }
   .pie-chart{ position:relative; width:150px; height:150px; border-radius:50%; flex-shrink:0; margin-inline:auto; transition:background .2s ease; }
   .pie-center{ position:absolute; inset:22%; border-radius:50%; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-shadow:0 0 0 1px var(--border-soft) inset; }
@@ -716,6 +719,56 @@
 
       <p class="assumption">Single-phase FLC = kVA × 1000 ⁄ V. Three-phase FLC = kVA × 1000 ⁄ (√3 × V). This is the transformer's rated full-load current at each voltage, not a substitute for its nameplate current, and doesn't include overcurrent protection sizing (NEC Table 450.3) or inrush.</p>
     </section>
+
+    <!-- CONDUIT FILL -->
+    <section class="view" id="view-conduit-fill" aria-labelledby="conduitTitle">
+      <div class="eyebrow">Conduit Fill</div>
+      <h1 id="conduitTitle" style="font-size:1.55rem;">Raceway Fill &amp; Minimum Size</h1>
+      <p class="view-intro">Add each conductor going into the raceway, then pick a trade size to check its fill, or leave it unknown to solve for the minimum standard size.</p>
+
+      <div class="form-row">
+        <div>
+          <div class="segmented compact" id="cfRaceway" role="group" aria-label="Raceway type">
+            <button type="button" data-value="emt" class="active">EMT</button>
+            <button type="button" data-value="imc">IMC</button>
+            <button type="button" data-value="rmc">RMC</button>
+            <button type="button" data-value="pvc40">PVC-40</button>
+          </div>
+        </div>
+        <div>
+          <div class="segmented compact" id="cfInsulation" role="group" aria-label="Conductor insulation">
+            <button type="button" data-value="thhn" class="active">THHN/THWN</button>
+            <button type="button" data-value="thw">TW/THW</button>
+            <button type="button" data-value="xhhw">XHHW</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="vfield full">
+          <label for="cf-size">Trade size</label>
+          <div class="row">
+            <select id="cf-size" aria-label="Trade size">
+              <option value="solve">— Unknown: solve for minimum size —</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="load-list" id="cfLoadList"></div>
+      <template id="cfRowTemplate">
+        <div class="wp-row">
+          <select class="cf-cond-size" aria-label="Conductor size"></select>
+          <div class="wp-watt-wrap qty"><input type="number" inputmode="numeric" step="1" min="1" class="cf-qty" placeholder="1" aria-label="Quantity"><span class="unit">qty</span></div>
+          <button type="button" class="wp-remove" aria-label="Remove conductor">×</button>
+        </div>
+      </template>
+      <button type="button" class="add-load-btn" id="cfAddRow">+ Add conductor</button>
+
+      <div class="result-card" id="cfResult" role="status" aria-live="polite"></div>
+
+      <p class="assumption">Fill limits from NEC Chapter 9, Table 1 — 53% for 1 conductor, 31% for 2, 40% for over 2 (including any equipment grounding/bonding conductor). Raceway internal areas from Table 4 (EMT, IMC, RMC, PVC Schedule 40, up to 4"); conductor areas from Table 5. Field estimate only — pulling tension, bends, and jamming risk (NEC Chapter 9 Informational Note No. 2) aren't checked here.</p>
+    </section>
   </main>
 
   <footer id="homeFooter">
@@ -748,9 +801,9 @@
     { id:"transformer", name:"Transformer FLC", status:"ready",
       desc:"Full-load current for single- and three-phase transformers by kVA and voltage.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="9" cy="12" r="4"/><circle cx="15" cy="12" r="4"/></svg>' },
-    { id:"conduit-fill", name:"Conduit Fill", status:"soon",
-      desc:"NEC Ch. 9 Table 4/5 raceway fill percentage by conductor mix.",
-      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="2"/><circle cx="15" cy="14" r="2.4"/></svg>' },
+    { id:"conduit-fill", name:"Conduit Fill", status:"ready",
+      desc:"NEC Ch. 9 Table 1/4/5 raceway fill percentage by conductor mix, or solve for minimum size.",
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="2"/><circle cx="15" cy="14" r="2.4"/></svg>' },
     { id:"box-fill", name:"Box Fill", status:"soon",
       desc:"NEC 314.16 device box volume and conductor fill count.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>' }
@@ -786,7 +839,8 @@
     "voltage-drop": document.getElementById("view-voltage-drop"),
     "ampacity": document.getElementById("view-ampacity"),
     "motor-data": document.getElementById("view-motor-data"),
-    "transformer": document.getElementById("view-transformer")
+    "transformer": document.getElementById("view-transformer"),
+    "conduit-fill": document.getElementById("view-conduit-fill")
   };
 
   function render(){
@@ -1682,6 +1736,152 @@
     }
 
     computeTransformer();
+  })();
+
+  /* ---------------- conduit fill ---------------- */
+  /* NEC Chapter 9, Table 4 — total (100%) internal area, sq in, trade sizes 1/2" - 4" */
+  var RACEWAY = {
+    emt:   { label:"EMT", sizes:[
+      { label:'1/2"',  area:0.304 }, { label:'3/4"',  area:0.533 }, { label:'1"',    area:0.864 },
+      { label:'1-1/4"', area:1.496 }, { label:'1-1/2"', area:2.036 }, { label:'2"',    area:3.356 },
+      { label:'2-1/2"', area:5.858 }, { label:'3"',    area:8.846 }, { label:'3-1/2"', area:11.545 }, { label:'4"', area:14.753 }
+    ]},
+    imc:   { label:"IMC", sizes:[
+      { label:'1/2"',  area:0.342 }, { label:'3/4"',  area:0.586 }, { label:'1"',    area:0.959 },
+      { label:'1-1/4"', area:1.647 }, { label:'1-1/2"', area:2.225 }, { label:'2"',    area:3.630 },
+      { label:'2-1/2"', area:5.135 }, { label:'3"',    area:7.922 }, { label:'3-1/2"', area:10.584 }, { label:'4"', area:13.631 }
+    ]},
+    rmc:   { label:"RMC", sizes:[
+      { label:'1/2"',  area:0.314 }, { label:'3/4"',  area:0.549 }, { label:'1"',    area:0.887 },
+      { label:'1-1/4"', area:1.526 }, { label:'1-1/2"', area:2.071 }, { label:'2"',    area:3.408 },
+      { label:'2-1/2"', area:4.866 }, { label:'3"',    area:7.499 }, { label:'3-1/2"', area:10.010 }, { label:'4"', area:12.882 }
+    ]},
+    pvc40: { label:"PVC Sch 40", sizes:[
+      { label:'1/2"',  area:0.285 }, { label:'3/4"',  area:0.508 }, { label:'1"',    area:0.832 },
+      { label:'1-1/4"', area:1.453 }, { label:'1-1/2"', area:1.986 }, { label:'2"',    area:3.291 },
+      { label:'2-1/2"', area:4.695 }, { label:'3"',    area:7.268 }, { label:'3-1/2"', area:9.737 }, { label:'4"', area:12.554 }
+    ]}
+  };
+
+  /* NEC Chapter 9, Table 5 — approximate conductor area, sq in, by insulation group */
+  var CONDUCTOR_SIZE_ORDER = ["14","12","10","8","6","4","3","2","1","1/0","2/0","3/0","4/0","250","300","350","400","500","600","700","750","800","900","1000"];
+  var CONDUCTOR_AREA = {
+    thhn: { "14":0.0097, "12":0.0133, "10":0.0211, "8":0.0366, "6":0.0507, "4":0.0824, "3":0.0973, "2":0.1158, "1":0.1562,
+            "1/0":0.1855, "2/0":0.2223, "3/0":0.2679, "4/0":0.3237, "250":0.3970, "300":0.4608, "350":0.5242, "400":0.5863,
+            "500":0.7073, "600":0.8676, "700":0.9887, "750":1.0496, "800":1.1085, "900":1.2311, "1000":1.3478 },
+    thw:  { "14":0.0139, "12":0.0181, "10":0.0243, "8":0.0437, "6":0.0726, "4":0.0973, "3":0.1134, "2":0.1333, "1":0.1901,
+            "1/0":0.2223, "2/0":0.2624, "3/0":0.3117, "4/0":0.3718, "250":0.4596, "300":0.5281, "350":0.5958, "400":0.6619,
+            "500":0.7901, "600":0.9729, "700":1.1010, "750":1.1652, "800":1.2272, "900":1.3561, "1000":1.4784 },
+    xhhw: { "14":0.0139, "12":0.0181, "10":0.0243, "8":0.0437, "6":0.0590, "4":0.0814, "3":0.0962, "2":0.1146, "1":0.1534,
+            "1/0":0.1825, "2/0":0.2190, "3/0":0.2642, "4/0":0.3197, "250":0.3904, "300":0.4536, "350":0.5166, "400":0.5782,
+            "500":0.6984, "600":0.8709, "700":0.9923, "750":1.0532, "800":1.1122, "900":1.2351, "1000":1.3519 }
+  };
+  function conductorSizeLabel(s){ return /^\d+$/.test(s) && parseInt(s, 10) >= 250 ? s + " kcmil" : s + " AWG"; }
+  function fillPctFor(count){ return count === 1 ? 53 : count === 2 ? 31 : 40; }
+
+  (function initConduitFill(){
+    var racewayGroup = document.getElementById("cfRaceway");
+    var insulationGroup = document.getElementById("cfInsulation");
+    var sizeSelect = document.getElementById("cf-size");
+    var listEl = document.getElementById("cfLoadList");
+    var rowTpl = document.getElementById("cfRowTemplate");
+    var addBtn = document.getElementById("cfAddRow");
+    var resultEl = document.getElementById("cfResult");
+
+    RACEWAY.emt.sizes.forEach(function(s, i){
+      var opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = s.label;
+      sizeSelect.appendChild(opt);
+    });
+
+    function addRow(size, qty){
+      var node = rowTpl.content.firstElementChild.cloneNode(true);
+      var condSelect = node.querySelector(".cf-cond-size");
+      CONDUCTOR_SIZE_ORDER.forEach(function(s){
+        var opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = conductorSizeLabel(s);
+        condSelect.appendChild(opt);
+      });
+      condSelect.value = size || "12";
+      var qtyInput = node.querySelector(".cf-qty");
+      qtyInput.value = qty != null ? qty : 1;
+      node.querySelector(".wp-remove").addEventListener("click", function(){ node.remove(); computeConduitFill(); });
+      condSelect.addEventListener("change", computeConduitFill);
+      qtyInput.addEventListener("input", computeConduitFill);
+      listEl.appendChild(node);
+      return node;
+    }
+
+    addBtn.addEventListener("click", function(){ addRow("12", 1); computeConduitFill(); });
+    wireSegmented(racewayGroup, computeConduitFill);
+    wireSegmented(insulationGroup, computeConduitFill);
+    sizeSelect.addEventListener("change", computeConduitFill);
+
+    function computeConduitFill(){
+      var raceway = activeMode(racewayGroup);
+      var insulation = activeMode(insulationGroup);
+      var areaTable = CONDUCTOR_AREA[insulation];
+      var rows = Array.prototype.slice.call(listEl.querySelectorAll(".wp-row"));
+      var totalCount = 0, totalArea = 0;
+
+      rows.forEach(function(row){
+        var size = row.querySelector(".cf-cond-size").value;
+        var qty = parseInt(row.querySelector(".cf-qty").value, 10);
+        if (!(qty > 0)) return;
+        totalCount += qty;
+        totalArea += areaTable[size] * qty;
+      });
+
+      if (totalCount === 0){
+        resultEl.innerHTML = '<p class="hint">Add at least one conductor.</p>';
+        return;
+      }
+
+      var maxPct = fillPctFor(totalCount);
+      var sizes = RACEWAY[raceway].sizes;
+      var racewayLabel = RACEWAY[raceway].label;
+
+      if (sizeSelect.value === "solve"){
+        var pick = null;
+        for (var i = 0; i < sizes.length; i++){
+          if (sizes[i].area * (maxPct / 100) >= totalArea){ pick = sizes[i]; break; }
+        }
+        if (!pick){
+          resultEl.innerHTML =
+            '<div class="k">Required conductor area</div>' +
+            '<div class="result-stat"><div class="v">' + fmt(totalArea, 3) + ' in²</div>' +
+            '<div class="sub">Exceeds the largest ' + racewayLabel + ' size (4") at ' + maxPct + '% fill — split into multiple raceways.</div></div>';
+          return;
+        }
+        var pct = (totalArea / pick.area) * 100;
+        resultEl.innerHTML =
+          '<div class="k">Recommended trade size</div>' +
+          '<div class="result-stat"><div class="v">' + pick.label + ' ' + racewayLabel + '</div>' +
+          '<div class="sub">' + totalCount + ' conductor' + (totalCount === 1 ? "" : "s") + ' · ' + fmt(totalArea, 3) + ' in² needed</div></div>' +
+          '<div class="result-grid">' +
+            '<div class="result-stat"><div class="k">Fill at this size</div><div class="v">' + fmt(pct, 1) + '%</div></div>' +
+            '<div class="result-stat"><div class="k">Max allowed</div><div class="v">' + maxPct + '%</div></div>' +
+          '</div>';
+        return;
+      }
+
+      var chosen = sizes[parseInt(sizeSelect.value, 10)];
+      var pct2 = (totalArea / chosen.area) * 100;
+      var ok = pct2 <= maxPct;
+      var tag = ok ? { cls:"ok", label:"Within " + maxPct + "% fill limit" } : { cls:"bad", label:"Exceeds " + maxPct + "% fill limit" };
+      resultEl.innerHTML =
+        '<div class="result-grid">' +
+          '<div class="result-stat"><div class="k">Fill</div><div class="v">' + fmt(pct2, 1) + '%</div></div>' +
+          '<div class="result-stat"><div class="k">Conductor area</div><div class="v">' + fmt(totalArea, 3) + ' in²</div></div>' +
+        '</div>' +
+        '<span class="pct-chip ' + tag.cls + '">' + tag.label + '</span>';
+    }
+
+    addRow("12", 3);
+    addRow("10", 3);
+    computeConduitFill();
   })();
 
   /* ---------------- online / offline status ---------------- */
