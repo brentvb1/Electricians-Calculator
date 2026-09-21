@@ -677,7 +677,7 @@
 
       <div class="result-card" id="motorResult" role="status" aria-live="polite"></div>
 
-      <p class="assumption">Full-load current from NEC Table 430.250 (3-phase, other than wound-rotor). NEMA starter size from NEMA ICS 2 full-voltage, non-plugging ratings — 460V and 575V share the same size chart. Minimum copper conductor is 125% × FLC (NEC 430.22) checked against Table 310.16's 75°C column; the size shown applies to THW, THHN-THWN, and XHHW alike, since most equipment terminations are limited to 75°C regardless of the conductor's own insulation rating (110.14(C)). Branch-circuit protection uses NEC Table 430.52 percentages for other than wound-rotor/synchronous motors — 175% dual-element fuse, 250% inverse-time breaker, 800% instantaneous-trip breaker — rounded up to the next standard device rating (240.6(A)). Field estimate only; verify against the NEC edition adopted by your AHJ and the motor's actual nameplate.</p>
+      <p class="assumption">Full-load current from NEC Table 430.250 (3-phase, other than wound-rotor). NEMA starter size from NEMA ICS 2 full-voltage, non-plugging ratings — 460V and 575V share the same size chart. Minimum copper conductor is 125% × FLC (NEC 430.22), checked against Table 310.16's 60°C column when the branch-circuit breaker is 100A or less and the 75°C column above that, per 110.14(C) — the size shown applies to THW, THHN-THWN, and XHHW alike, since equipment terminations (not the conductor's own insulation rating) set the applicable column, and this assumes equipment that isn't marked for a higher rating. Branch-circuit protection uses NEC Table 430.52 percentages for other than wound-rotor/synchronous motors — 175% dual-element fuse, 250% inverse-time breaker, 800% instantaneous-trip breaker — rounded up to the next standard device rating (240.6(A)); these are the code-maximum ratings, and installed/combination-starter equipment is often protected at a smaller size than this ceiling. Field estimate only; verify against the NEC edition adopted by your AHJ and the motor's actual nameplate.</p>
     </section>
   </main>
 
@@ -1539,9 +1539,10 @@
     return Math.ceil(x / 100) * 100;
   }
 
-  function pickMinWireSize(requiredAmpacity){
+  function pickMinWireSize(requiredAmpacity, terminationCol){
     var list = AMPACITY.cu;
-    for (var i = 0; i < list.length; i++){ if (list[i].a75 >= requiredAmpacity) return list[i].label; }
+    var col = terminationCol === 60 ? "a60" : "a75";
+    for (var i = 0; i < list.length; i++){ if (list[i][col] >= requiredAmpacity) return list[i].label; }
     return "> 1000 kcmil — parallel conductors";
   }
 
@@ -1576,16 +1577,19 @@
       var flc = motor["flc" + voltage];
 
       var nemaSize = getNemaSize(motor.hp, voltage);
-      var wireSize = pickMinWireSize(flc * 1.25);
       var fuse = roundUpStandard(flc * 1.75);
       var invTimeCB = roundUpStandard(flc * 2.50);
       var instCB = roundUpStandard(flc * 8.00);
+      // NEC 110.14(C): terminations on equipment rated <=100A use the 60C ampacity
+      // column unless the equipment is marked for 75C; above 100A, 75C applies.
+      // The inverse-time breaker rating stands in for "the equipment's rating" here.
+      var wireSize = pickMinWireSize(flc * 1.25, invTimeCB <= 100 ? 60 : 75);
 
       resultEl.innerHTML =
         '<div class="spec-group">Motor</div>' +
         '<div class="spec-row"><span class="spec-k">NEC full-load current</span><span class="spec-v">' + fmt(flc, 1) + ' A</span></div>' +
         '<div class="spec-row"><span class="spec-k">NEMA starter size</span><span class="spec-v">' + (nemaSize || "Exceeds chart") + '</span></div>' +
-        '<div class="spec-group">Minimum conductor — 75°C Cu</div>' +
+        '<div class="spec-group">Minimum conductor — Cu (' + (invTimeCB <= 100 ? "60°C" : "75°C") + ' terminations)</div>' +
         '<div class="spec-row"><span class="spec-k">THW</span><span class="spec-v">' + wireSize + '</span></div>' +
         '<div class="spec-row"><span class="spec-k">THHN-THWN</span><span class="spec-v">' + wireSize + '</span></div>' +
         '<div class="spec-row"><span class="spec-k">XHHW</span><span class="spec-v">' + wireSize + '</span></div>' +
