@@ -859,6 +859,11 @@
 (function(){
   "use strict";
 
+  /* ---------------- select numeric input value on focus (tap-to-overwrite) ---------------- */
+  document.addEventListener("focusin", function(e){
+    if (e.target.matches && e.target.matches('input[type="number"]')) e.target.select();
+  });
+
   /* ---------------- tool registry (extend here for future calculators) ---------------- */
   var TOOLS = [
     { id:"ohms-law", name:"Ohm's Law &amp; Power", status:"ready",
@@ -1052,7 +1057,6 @@
 
   KEYS.forEach(function(key){
     var input = inputs[key];
-    input.addEventListener("focus", function(){ input.select(); });
     input.addEventListener("input", function(){
       var raw = input.value;
       var idx = enteredOrder.indexOf(key);
