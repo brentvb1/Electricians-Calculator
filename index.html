@@ -769,6 +769,81 @@
 
       <p class="assumption">Fill limits from NEC Chapter 9, Table 1 — 53% for 1 conductor, 31% for 2, 40% for over 2 (including any equipment grounding/bonding conductor). Raceway internal areas from Table 4 (EMT, IMC, RMC, PVC Schedule 40, up to 4"); conductor areas from Table 5. Field estimate only — pulling tension, bends, and jamming risk (NEC Chapter 9 Informational Note No. 2) aren't checked here.</p>
     </section>
+
+    <!-- BOX FILL -->
+    <section class="view" id="view-box-fill" aria-labelledby="boxFillTitle">
+      <div class="eyebrow">Box Fill</div>
+      <h1 id="boxFillTitle" style="font-size:1.55rem;">Device Box Volume &amp; Fill</h1>
+      <p class="view-intro">Add every conductor, clamp, stud, device, and grounding conductor entering the box to check its fill against NEC 314.16.</p>
+
+      <div class="form-row">
+        <div class="vfield full">
+          <label for="bf-box">Box</label>
+          <div class="row">
+            <select id="bf-box" aria-label="Box type"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row" id="bfCustomRow" style="display:none;">
+        <div class="vfield full">
+          <label for="bf-custom-volume">Volume marked on box</label>
+          <div class="row"><input type="number" inputmode="decimal" step="any" min="0" id="bf-custom-volume" value="18"><span class="unit">in³</span></div>
+        </div>
+      </div>
+
+      <div class="load-list" id="bfLoadList"></div>
+      <template id="bfRowTemplate">
+        <div class="wp-row">
+          <select class="bf-cond-size" aria-label="Conductor size"></select>
+          <div class="wp-watt-wrap qty"><input type="number" inputmode="numeric" step="1" min="1" class="bf-qty" placeholder="1" aria-label="Quantity"><span class="unit">qty</span></div>
+          <button type="button" class="wp-remove" aria-label="Remove conductor">×</button>
+        </div>
+      </template>
+      <button type="button" class="add-load-btn" id="bfAddRow">+ Add conductor</button>
+
+      <div class="form-row">
+        <div>
+          <div class="field-sub" style="margin-bottom:.3rem;">Cable clamps</div>
+          <div class="segmented" id="bfClamps" role="group" aria-label="Cable clamps">
+            <button type="button" data-value="0">None</button>
+            <button type="button" data-value="1" class="active">Present</button>
+          </div>
+        </div>
+        <div>
+          <div class="field-sub" style="margin-bottom:.3rem;">Grounding conductors</div>
+          <div class="segmented" id="bfGround" role="group" aria-label="Equipment grounding conductors">
+            <button type="button" data-value="0">None</button>
+            <button type="button" data-value="1" class="active">Present</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="vfield">
+          <label for="bf-studs">Fixture studs / hickeys</label>
+          <div class="row"><input type="number" inputmode="numeric" step="1" min="0" id="bf-studs" value="0"></div>
+        </div>
+        <div class="vfield">
+          <label for="bf-devices">Devices (switches/receptacles)</label>
+          <div class="row"><input type="number" inputmode="numeric" step="1" min="0" id="bf-devices" value="1"></div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div>
+          <div class="field-sub" style="margin-bottom:.3rem;">Isolated grounding conductor also present</div>
+          <div class="segmented" id="bfIsoGround" role="group" aria-label="Isolated grounding conductor">
+            <button type="button" data-value="0" class="active">No</button>
+            <button type="button" data-value="1">Yes</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-card" id="bfResult" role="status" aria-live="polite"></div>
+
+      <p class="assumption">Per NEC 314.16(B): each conductor counts once at its own size (18–6 AWG only — larger conductors fall under 314.28, not covered here). Clamps count one allowance total (any number present) at the largest conductor size; each fixture stud/hickey and each device (2× per device) count at the largest conductor size; grounding conductors count one allowance total at the largest conductor size, plus one more if an isolated ground is also present. Box volumes are from Table 314.16(A) for standard metal boxes — always use the volume marked on the box itself when present.</p>
+    </section>
   </main>
 
   <footer id="homeFooter">
@@ -804,9 +879,9 @@
     { id:"conduit-fill", name:"Conduit Fill", status:"ready",
       desc:"NEC Ch. 9 Table 1/4/5 raceway fill percentage by conductor mix, or solve for minimum size.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="2"/><circle cx="15" cy="14" r="2.4"/></svg>' },
-    { id:"box-fill", name:"Box Fill", status:"soon",
+    { id:"box-fill", name:"Box Fill", status:"ready",
       desc:"NEC 314.16 device box volume and conductor fill count.",
-      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--text-faint)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>' }
+      icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>' }
   ];
 
   var grid = document.getElementById("toolGrid");
@@ -840,7 +915,8 @@
     "ampacity": document.getElementById("view-ampacity"),
     "motor-data": document.getElementById("view-motor-data"),
     "transformer": document.getElementById("view-transformer"),
-    "conduit-fill": document.getElementById("view-conduit-fill")
+    "conduit-fill": document.getElementById("view-conduit-fill"),
+    "box-fill": document.getElementById("view-box-fill")
   };
 
   function render(){
@@ -1882,6 +1958,153 @@
     addRow("12", 3);
     addRow("10", 3);
     computeConduitFill();
+  })();
+
+  /* ---------------- box fill ---------------- */
+  /* NEC Table 314.16(B) — volume allowance per conductor, sq in (18 AWG - 6 AWG only) */
+  var BOX_CONDUCTOR_SIZES = ["18", "16", "14", "12", "10", "8", "6"];
+  var BOX_CONDUCTOR_VOLUME = { "18":1.50, "16":1.75, "14":2.00, "12":2.25, "10":2.50, "8":3.00, "6":5.00 };
+
+  /* NEC Table 314.16(A) — standard metal box volumes, cu in */
+  var BOX_TYPES = [
+    { label:'4" round/oct, 1-1/4" deep', vol:12.5 },
+    { label:'4" round/oct, 1-1/2" deep', vol:15.5 },
+    { label:'4" round/oct, 2-1/8" deep', vol:21.5 },
+    { label:'4" square, 1-1/4" deep', vol:18.0 },
+    { label:'4" square, 1-1/2" deep', vol:21.0 },
+    { label:'4" square, 2-1/8" deep', vol:30.3 },
+    { label:'4-11/16" square, 1-1/4" deep', vol:25.5 },
+    { label:'4-11/16" square, 1-1/2" deep', vol:29.5 },
+    { label:'4-11/16" square, 2-1/8" deep', vol:42.0 },
+    { label:'3x2x1-1/2 device', vol:7.5 },
+    { label:'3x2x2 device', vol:10.0 },
+    { label:'3x2x2-1/4 device', vol:10.5 },
+    { label:'3x2x2-1/2 device', vol:12.5 },
+    { label:'3x2x2-3/4 device', vol:14.0 },
+    { label:'3x2x3-1/2 device', vol:18.0 },
+    { label:'4x2-1/8x1-1/2 device', vol:10.3 },
+    { label:'4x2-1/8x1-7/8 device', vol:13.0 },
+    { label:'4x2-1/8x2-1/8 device', vol:14.5 },
+    { label:'3-3/4x2x2-1/2 masonry/gang', vol:14.0 },
+    { label:'3-3/4x2x3-1/2 masonry/gang', vol:21.0 }
+  ];
+
+  (function initBoxFill(){
+    var boxSelect = document.getElementById("bf-box");
+    var customRow = document.getElementById("bfCustomRow");
+    var customVolumeInput = document.getElementById("bf-custom-volume");
+    var listEl = document.getElementById("bfLoadList");
+    var rowTpl = document.getElementById("bfRowTemplate");
+    var addBtn = document.getElementById("bfAddRow");
+    var clampsGroup = document.getElementById("bfClamps");
+    var groundGroup = document.getElementById("bfGround");
+    var isoGroundGroup = document.getElementById("bfIsoGround");
+    var studsInput = document.getElementById("bf-studs");
+    var devicesInput = document.getElementById("bf-devices");
+    var resultEl = document.getElementById("bfResult");
+
+    BOX_TYPES.forEach(function(b, i){
+      var opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = b.label + " — " + b.vol + ' in³';
+      boxSelect.appendChild(opt);
+    });
+    var customOpt = document.createElement("option");
+    customOpt.value = "custom";
+    customOpt.textContent = "Custom volume (marked on box)";
+    boxSelect.appendChild(customOpt);
+    boxSelect.value = 14; // 3x2x3-1/2 device box, a common single-gang size
+
+    function syncCustomRow(){
+      customRow.style.display = boxSelect.value === "custom" ? "grid" : "none";
+    }
+    boxSelect.addEventListener("change", function(){ syncCustomRow(); computeBoxFill(); });
+    customVolumeInput.addEventListener("input", computeBoxFill);
+
+    function addRow(size, qty){
+      var node = rowTpl.content.firstElementChild.cloneNode(true);
+      var condSelect = node.querySelector(".bf-cond-size");
+      BOX_CONDUCTOR_SIZES.forEach(function(s){
+        var opt = document.createElement("option");
+        opt.value = s;
+        opt.textContent = s + " AWG";
+        condSelect.appendChild(opt);
+      });
+      condSelect.value = size || "12";
+      var qtyInput = node.querySelector(".bf-qty");
+      qtyInput.value = qty != null ? qty : 1;
+      node.querySelector(".wp-remove").addEventListener("click", function(){ node.remove(); computeBoxFill(); });
+      condSelect.addEventListener("change", computeBoxFill);
+      qtyInput.addEventListener("input", computeBoxFill);
+      listEl.appendChild(node);
+      return node;
+    }
+
+    addBtn.addEventListener("click", function(){ addRow("12", 1); computeBoxFill(); });
+    wireSegmented(clampsGroup, computeBoxFill);
+    wireSegmented(groundGroup, computeBoxFill);
+    wireSegmented(isoGroundGroup, computeBoxFill);
+    studsInput.addEventListener("input", computeBoxFill);
+    devicesInput.addEventListener("input", computeBoxFill);
+
+    function computeBoxFill(){
+      var rows = Array.prototype.slice.call(listEl.querySelectorAll(".wp-row"));
+      var totalConductorVol = 0, conductorCount = 0, largestIdx = -1;
+
+      rows.forEach(function(row){
+        var size = row.querySelector(".bf-cond-size").value;
+        var qty = parseInt(row.querySelector(".bf-qty").value, 10);
+        if (!(qty > 0)) return;
+        conductorCount += qty;
+        totalConductorVol += BOX_CONDUCTOR_VOLUME[size] * qty;
+        var idx = BOX_CONDUCTOR_SIZES.indexOf(size);
+        if (idx > largestIdx) largestIdx = idx;
+      });
+
+      if (conductorCount === 0){
+        resultEl.innerHTML = '<p class="hint">Add at least one conductor.</p>';
+        return;
+      }
+
+      var largestVol = BOX_CONDUCTOR_VOLUME[BOX_CONDUCTOR_SIZES[largestIdx]];
+      var clampsPresent = activeMode(clampsGroup) === "1";
+      var groundPresent = activeMode(groundGroup) === "1";
+      var isoGroundPresent = activeMode(isoGroundGroup) === "1";
+      var studCount = parseInt(studsInput.value, 10) || 0;
+      var deviceCount = parseInt(devicesInput.value, 10) || 0;
+
+      var clampVol = clampsPresent ? largestVol : 0;
+      var studVol = studCount * largestVol;
+      var deviceVol = deviceCount * 2 * largestVol;
+      var groundVol = (groundPresent ? largestVol : 0) + (isoGroundPresent ? largestVol : 0);
+
+      var totalVol = totalConductorVol + clampVol + studVol + deviceVol + groundVol;
+
+      var boxVol = boxSelect.value === "custom"
+        ? parseFloat(customVolumeInput.value)
+        : BOX_TYPES[parseInt(boxSelect.value, 10)].vol;
+
+      if (!(boxVol > 0)){
+        resultEl.innerHTML = '<p class="hint">Enter the box volume.</p>';
+        return;
+      }
+
+      var pct = (totalVol / boxVol) * 100;
+      var ok = totalVol <= boxVol;
+      var tag = ok ? { cls:"ok", label:"Fits within box volume" } : { cls:"bad", label:"Exceeds box volume — use a larger box" };
+
+      resultEl.innerHTML =
+        '<div class="result-grid">' +
+          '<div class="result-stat"><div class="k">Required volume</div><div class="v">' + fmt(totalVol, 2) + ' in³</div></div>' +
+          '<div class="result-stat"><div class="k">Box volume</div><div class="v">' + fmt(boxVol, 2) + ' in³</div></div>' +
+        '</div>' +
+        '<div class="result-stat" style="margin-top:.7rem;"><div class="k">Fill</div><div class="v" style="font-size:1.1rem;">' + fmt(pct, 0) + '%</div></div>' +
+        '<span class="pct-chip ' + tag.cls + '">' + tag.label + '</span>';
+    }
+
+    syncCustomRow();
+    addRow("12", 3);
+    computeBoxFill();
   })();
 
   /* ---------------- online / offline status ---------------- */
