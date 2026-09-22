@@ -772,8 +772,15 @@
 
     <!-- BOX FILL -->
     <section class="view" id="view-box-fill" aria-labelledby="boxFillTitle">
-      <div class="eyebrow">Box Fill</div>
+      <div class="eyebrow">Box &amp; Pull Sizing</div>
       <h1 id="boxFillTitle" style="font-size:1.55rem;">Device Box Volume &amp; Fill</h1>
+
+      <div class="segmented" id="boxMode" role="group" aria-label="Calculator mode" style="margin-top:1.1rem;">
+        <button type="button" data-mode="device" class="active">Device Box</button>
+        <button type="button" data-mode="pull">Pull / Junction Box</button>
+      </div>
+
+      <div class="mode-panel active" id="boxPanelDevice">
       <p class="view-intro">Add every conductor, clamp, stud, device, and grounding conductor entering the box to check its fill against NEC 314.16.</p>
 
       <div class="form-row">
@@ -842,7 +849,42 @@
 
       <div class="result-card" id="bfResult" role="status" aria-live="polite"></div>
 
-      <p class="assumption">Per NEC 314.16(B): each conductor counts once at its own size (18–6 AWG only — larger conductors fall under 314.28, not covered here). Clamps count one allowance total (any number present) at the largest conductor size; each fixture stud/hickey and each device (2× per device) count at the largest conductor size; grounding conductors count one allowance total at the largest conductor size, plus one more if an isolated ground is also present. Box volumes are from Table 314.16(A) for standard metal boxes — always use the volume marked on the box itself when present.</p>
+      <p class="assumption">Per NEC 314.16(B): each conductor counts once at its own size (18–6 AWG only — larger conductors fall under 314.28, covered in the Pull / Junction Box mode above). Clamps count one allowance total (any number present) at the largest conductor size; each fixture stud/hickey and each device (2× per device) count at the largest conductor size; grounding conductors count one allowance total at the largest conductor size, plus one more if an isolated ground is also present. Box volumes are from Table 314.16(A) for standard metal boxes — always use the volume marked on the box itself when present.</p>
+      </div>
+
+      <div class="mode-panel" id="boxPanelPull">
+        <p class="view-intro">For conductors 4 AWG and larger: size a pull or junction box per NEC 314.28(A).</p>
+
+        <div class="segmented" id="pullType" role="group" aria-label="Pull type">
+          <button type="button" data-value="straight" class="active">Straight Pull</button>
+          <button type="button" data-value="angle">Angle / U Pull</button>
+        </div>
+
+        <div class="form-row" id="pullStraightRow" style="margin-top:.9rem;">
+          <div class="vfield full">
+            <label for="pull-straight-size">Largest raceway (trade size)</label>
+            <div class="row">
+              <select id="pull-straight-size" aria-label="Largest raceway trade size"></select>
+            </div>
+          </div>
+        </div>
+
+        <div id="pullAngleSection" style="display:none;">
+          <div class="load-list" id="pullRacewayList"></div>
+          <template id="pullRowTemplate">
+            <div class="wp-row">
+              <select class="pull-size" aria-label="Raceway trade size"></select>
+              <div class="wp-watt-wrap qty"><input type="number" inputmode="numeric" step="1" min="1" class="pull-qty" placeholder="1" aria-label="Quantity"><span class="unit">qty</span></div>
+              <button type="button" class="wp-remove" aria-label="Remove raceway">×</button>
+            </div>
+          </template>
+          <button type="button" class="add-load-btn" id="pullAddRow">+ Add raceway on this wall</button>
+        </div>
+
+        <div class="result-card" id="pullResult" role="status" aria-live="polite"></div>
+
+        <p class="assumption">Straight pulls: minimum box length ≥ 8× the trade diameter of the largest raceway entering the box. Angle or U pulls: minimum distance from that wall's raceway entries to the opposite wall ≥ 6× the trade diameter of the largest raceway on that wall, plus the sum of the trade diameters of every other raceway entering on the same wall. Applies to conductors 4 AWG and larger (insulated) or their cables, including splices. Covers a single wall/row only — consult NEC 314.28(A) directly for multiple entry rows or mixed conductor sizes.</p>
+      </div>
     </section>
   </main>
 
@@ -884,8 +926,8 @@
     { id:"conduit-fill", name:"Conduit Fill", status:"ready",
       desc:"NEC Ch. 9 Table 1/4/5 raceway fill percentage by conductor mix, or solve for minimum size.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="2"/><circle cx="15" cy="14" r="2.4"/></svg>' },
-    { id:"box-fill", name:"Box Fill", status:"ready",
-      desc:"NEC 314.16 device box volume and conductor fill count.",
+    { id:"box-fill", name:"Box &amp; Pull Sizing", status:"ready",
+      desc:"NEC 314.16 device box fill, plus 314.28 pull &amp; junction box sizing for 4 AWG and larger.",
       icon:'<svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>' }
   ];
 
@@ -2109,6 +2151,130 @@
     syncCustomRow();
     addRow("12", 3);
     computeBoxFill();
+  })();
+
+  /* ---------------- box / pull mode switch ---------------- */
+  var boxModeGroup = document.getElementById("boxMode");
+  var boxFillTitleEl = document.getElementById("boxFillTitle");
+  var BOX_PANELS = { device: document.getElementById("boxPanelDevice"), pull: document.getElementById("boxPanelPull") };
+  var BOX_TITLES = { device: "Device Box Volume & Fill", pull: "Pull & Junction Box Sizing" };
+  wireSegmented(boxModeGroup, function(){
+    var mode = boxModeGroup.querySelector("button.active").getAttribute("data-mode");
+    Object.keys(BOX_PANELS).forEach(function(k){ BOX_PANELS[k].classList.toggle("active", k === mode); });
+    boxFillTitleEl.textContent = BOX_TITLES[mode];
+  });
+  boxModeGroup.querySelectorAll("button").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      boxModeGroup.querySelectorAll("button").forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+    });
+  });
+
+  /* ---------------- pull / junction box sizing ---------------- */
+  /* NEC 314.28(A) trade diameters, in — independent of raceway type */
+  var PULL_TRADE_SIZES = [
+    { label:'1/2"', val:0.5 }, { label:'3/4"', val:0.75 }, { label:'1"', val:1 },
+    { label:'1-1/4"', val:1.25 }, { label:'1-1/2"', val:1.5 }, { label:'2"', val:2 },
+    { label:'2-1/2"', val:2.5 }, { label:'3"', val:3 }, { label:'3-1/2"', val:3.5 },
+    { label:'4"', val:4 }, { label:'5"', val:5 }, { label:'6"', val:6 }
+  ];
+
+  (function initPullBox(){
+    var typeGroup = document.getElementById("pullType");
+    var straightRow = document.getElementById("pullStraightRow");
+    var straightSelect = document.getElementById("pull-straight-size");
+    var angleSection = document.getElementById("pullAngleSection");
+    var listEl = document.getElementById("pullRacewayList");
+    var rowTpl = document.getElementById("pullRowTemplate");
+    var addBtn = document.getElementById("pullAddRow");
+    var resultEl = document.getElementById("pullResult");
+
+    PULL_TRADE_SIZES.forEach(function(s, i){
+      var opt = document.createElement("option");
+      opt.value = i;
+      opt.textContent = s.label;
+      straightSelect.appendChild(opt);
+    });
+    straightSelect.value = 5; // 2"
+
+    function addRow(sizeIdx, qty){
+      var node = rowTpl.content.firstElementChild.cloneNode(true);
+      var sizeSelect = node.querySelector(".pull-size");
+      PULL_TRADE_SIZES.forEach(function(s, i){
+        var opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = s.label;
+        sizeSelect.appendChild(opt);
+      });
+      sizeSelect.value = sizeIdx != null ? sizeIdx : 5;
+      var qtyInput = node.querySelector(".pull-qty");
+      qtyInput.value = qty != null ? qty : 1;
+      node.querySelector(".wp-remove").addEventListener("click", function(){ node.remove(); computePullBox(); });
+      sizeSelect.addEventListener("change", computePullBox);
+      qtyInput.addEventListener("input", computePullBox);
+      listEl.appendChild(node);
+      return node;
+    }
+
+    addBtn.addEventListener("click", function(){ addRow(5, 1); computePullBox(); });
+    straightSelect.addEventListener("change", computePullBox);
+
+    function syncPullType(){
+      var type = activeMode(typeGroup);
+      straightRow.style.display = type === "straight" ? "grid" : "none";
+      angleSection.style.display = type === "angle" ? "block" : "none";
+    }
+    wireSegmented(typeGroup, function(){ syncPullType(); computePullBox(); });
+
+    function computePullBox(){
+      var type = activeMode(typeGroup);
+
+      if (type === "straight"){
+        var size = PULL_TRADE_SIZES[parseInt(straightSelect.value, 10)];
+        var required = 8 * size.val;
+        resultEl.innerHTML =
+          '<div class="k">Minimum box length</div>' +
+          '<div class="result-stat"><div class="v">' + fmt(required, 2) + '"</div>' +
+          '<div class="sub">8 × ' + size.label + ' largest raceway</div></div>';
+        return;
+      }
+
+      var rows = Array.prototype.slice.call(listEl.querySelectorAll(".wp-row"));
+      var entries = [];
+      rows.forEach(function(row){
+        var idx = parseInt(row.querySelector(".pull-size").value, 10);
+        var qty = parseInt(row.querySelector(".pull-qty").value, 10);
+        if (!(qty > 0)) return;
+        for (var i = 0; i < qty; i++) entries.push(PULL_TRADE_SIZES[idx]);
+      });
+
+      if (entries.length === 0){
+        resultEl.innerHTML = '<p class="hint">Add at least one raceway entering this wall.</p>';
+        return;
+      }
+
+      var largest = entries[0];
+      entries.forEach(function(e){ if (e.val > largest.val) largest = e; });
+      var total = entries.reduce(function(sum, e){ return sum + e.val; }, 0);
+      var sumOthers = total - largest.val;
+      var required2 = 6 * largest.val + sumOthers;
+
+      var otherCount = entries.length - 1;
+      var subText = "6 × " + largest.label + " largest raceway";
+      if (sumOthers > 0){
+        subText += " + " + fmt(sumOthers, 2) + '" from ' + otherCount + " other entr" + (otherCount === 1 ? "y" : "ies") + " on this wall";
+      }
+
+      resultEl.innerHTML =
+        '<div class="k">Minimum distance to opposite wall</div>' +
+        '<div class="result-stat"><div class="v">' + fmt(required2, 2) + '"</div>' +
+        '<div class="sub">' + subText + '</div></div>';
+    }
+
+    syncPullType();
+    addRow(7, 1);
+    addRow(5, 2);
+    computePullBox();
   })();
 
   /* ---------------- online / offline status ---------------- */
